@@ -56,7 +56,6 @@ st.markdown("""
     }
     .stButton > button:hover, button[kind="primary"]:hover { background-color: #E6C200 !important; }
 
-    /* Larger center column header */
     .center-header {
         font-size: 1.45rem !important;
         margin: 0.2rem 0 0.4rem 0 !important;
@@ -65,7 +64,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Center column style: green blocks + Bebas Neue
 CENTER_STYLE = """
 .sortable-container {
     background: transparent !important;
@@ -245,15 +243,21 @@ with tab1:
             with col_center:
                 display_name = person.strip() or "Your"
                 st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
+                
                 numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
+                
+                # More stable key reduces full remounts
                 center_result = sort_items(
                     numbered,
                     direction="vertical",
-                    key=f"center_{len(st.session_state.ranking)}_{hash(tuple(st.session_state.ranking))}",
+                    key="ranking_sortable",
                     custom_style=CENTER_STYLE
                 )
+                
                 new_ranking = [item.split(". ", 1)[1] if ". " in item else item for item in center_result]
-                if new_ranking != st.session_state.ranking:
+                
+                # Only update + rerun if the order actually changed
+                if new_ranking != st.session_state.ranking and len(new_ranking) == len(st.session_state.ranking):
                     st.session_state.ranking = new_ranking
                     st.rerun()
 
