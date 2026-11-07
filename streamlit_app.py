@@ -64,14 +64,14 @@ st.markdown("""
 
     .rank-numbers {
         text-align: right;
-        padding-right: 6px;
+        padding-right: 8px;
         color: #ffffff !important;
         font-weight: 700;
         font-size: 0.9rem;
-        margin-top: 6px;
+        margin-top: 4px;
     }
     .rank-numbers div {
-        height: 27.2px;
+        height: 28px;
         display: flex;
         align-items: center;
         justify-content: flex-end;
@@ -79,32 +79,33 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Green blocks sized for 27.2px total height
 CENTER_STYLE = """
 .sortable-container {
     background: transparent !important;
 }
 .sortable-container-body {
     background: transparent !important;
-    max-height: 680px !important;
-    min-height: 680px !important;
+    max-height: 700px !important;
+    min-height: 700px !important;
     overflow-y: hidden !important;
 }
 .sortable-item {
     background-color: #4CAF50 !important;
     color: #1a1a1a !important;
     text-align: left !important;
-    padding: 3px 10px !important;
+    padding: 4px 10px !important;
     margin: 0 !important;
     border-radius: 4px !important;
     font-size: 0.9rem !important;
     line-height: 1.2 !important;
-    height: 27.2px !important;
-    min-height: 27.2px !important;
+    height: 28px !important;
+    min-height: 28px !important;
     box-sizing: border-box !important;
     font-family: 'Bebas Neue', sans-serif !important;
     letter-spacing: 2px !important;
     font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
 }
 .sortable-item:hover { background-color: #66BB6A !important; }
 """
@@ -251,7 +252,7 @@ with tab1:
             with col_left:
                 st.subheader("Available Teams (click to add)")
                 available = [t for t in teams if t not in st.session_state.ranking]
-                with st.container(height=680):
+                with st.container(height=700):
                     for team in available:
                         if st.button(team, key=f"add_{team}", use_container_width=True):
                             if len(st.session_state.ranking) < 25:
@@ -262,7 +263,7 @@ with tab1:
                 display_name = person.strip() or "Your"
                 st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
 
-                num_col, sort_col = st.columns([0.1, 0.9])
+                num_col, sort_col = st.columns([0.08, 0.92])
 
                 with num_col:
                     numbers_html = '<div class="rank-numbers">'
