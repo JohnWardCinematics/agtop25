@@ -3,7 +3,7 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 from streamlit_sortables import sort_items
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 from collections import defaultdict
 
@@ -56,6 +56,20 @@ SORTABLE_STYLE = """
 """
 
 ET = pytz.timezone("America/New_York")
+
+def get_current_week_range():
+    now = datetime.now(ET)
+    # Monday = 0, Sunday = 6
+    days_since_monday = now.weekday()
+    monday = (now - timedelta(days=days_since_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
+    sunday = monday + timedelta(days=6)
+    sunday = sunday.replace(hour=23, minute=59, second=59)
+    return monday, sunday
+
+def format_date_range():
+    monday, sunday = get_current_week_range()
+    return f"{monday.strftime('%B %d %Y')} - {sunday.strftime('%B %d %Y')}"
+
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
@@ -154,7 +168,9 @@ def load_results(_gc):
         return pd.DataFrame()
 
 # --- UI ---
-st.title("Associated Goys Top 25 Poll")
+date_range = format_date_range()
+st.title(f"Associated Goys Top 25 Poll | {date_range}")
+
 gc = get_gsheet_client()
 teams = load_teams()
 
@@ -187,10 +203,7 @@ with tab1:
                 st.subheader(f"{display_name} Rankings (drag to reorder)")
 
                 if st.session_state.ranking:
-                    # Always rebuild numbered list from current order
                     numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
-
-                    # Use a changing key so the component refreshes with new numbers
                     sort_key = f"rank_{len(st.session_state.ranking)}_{hash(tuple(st.session_state.ranking))}"
 
                     reordered_numbered = sort_items(
@@ -200,7 +213,6 @@ with tab1:
                         custom_style=SORTABLE_STYLE
                     )
 
-                    # Strip the old numbers and rebuild clean team list
                     new_ranking = []
                     for item in reordered_numbered:
                         if ". " in item:
@@ -208,7 +220,6 @@ with tab1:
                         else:
                             new_ranking.append(item)
 
-                    # Update and force rerun so numbers regenerate
                     if new_ranking != st.session_state.ranking:
                         st.session_state.ranking = new_ranking
                         st.rerun()
