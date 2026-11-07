@@ -246,7 +246,6 @@ with tab1:
                 
                 numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
                 
-                # More stable key reduces full remounts
                 center_result = sort_items(
                     numbered,
                     direction="vertical",
@@ -256,10 +255,19 @@ with tab1:
                 
                 new_ranking = [item.split(". ", 1)[1] if ". " in item else item for item in center_result]
                 
-                # Only update + rerun if the order actually changed
                 if new_ranking != st.session_state.ranking and len(new_ranking) == len(st.session_state.ranking):
                     st.session_state.ranking = new_ranking
                     st.rerun()
+
+                # Remove buttons for each ranked team
+                if st.session_state.ranking:
+                    st.caption("Remove individual teams:")
+                    remove_cols = st.columns(5)
+                    for i, team in enumerate(st.session_state.ranking):
+                        with remove_cols[i % 5]:
+                            if st.button(f"✕ {i+1}", key=f"rm_{i}", help=f"Remove {team}"):
+                                st.session_state.ranking.pop(i)
+                                st.rerun()
 
             with col_right:
                 st.subheader("Submit")
@@ -269,8 +277,12 @@ with tab1:
                             st.success("Ranking saved.")
                             st.session_state.ranking = []
                             st.rerun()
+                    if st.button("START OVER", use_container_width=True):
+                        st.session_state.ranking = []
+                        st.rerun()
                 else:
                     st.button("Submit / Update Ranking", disabled=True, use_container_width=True)
+                    st.button("START OVER", disabled=True, use_container_width=True)
 
 with tab2:
     st.subheader("Weighted Aggregate Top 25")
