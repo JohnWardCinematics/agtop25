@@ -192,20 +192,21 @@ with tab1:
             if "ranking" not in st.session_state:
                 st.session_state.ranking = []
 
-            col1, col2 = st.columns(2)
+            # Three columns: 1/4 | 1/2 | 1/4
+            col_left, col_center, col_right = st.columns([1, 2, 1])
 
-            with col1:
+            with col_left:
                 st.subheader("Available Teams")
                 available = [t for t in teams if t not in st.session_state.ranking]
                 for team in available:
-                    c1, c2 = st.columns([4, 1])
+                    c1, c2 = st.columns([3, 1])
                     c1.write(team)
                     if c2.button("Add", key=f"add_{team}"):
                         if len(st.session_state.ranking) < 25:
                             st.session_state.ranking.append(team)
                             st.rerun()
 
-            with col2:
+            with col_center:
                 display_name = person.strip() or "Your"
                 st.subheader(f"{display_name} Rankings (drag to reorder)")
 
@@ -230,14 +231,19 @@ with tab1:
                     if new_ranking != st.session_state.ranking:
                         st.session_state.ranking = new_ranking
                         st.rerun()
+                else:
+                    st.info("Add teams from the left to build your top 25.")
 
-                    if st.button("Submit / Update Ranking", type="primary"):
+            with col_right:
+                st.subheader("Submit")
+                if st.session_state.ranking:
+                    if st.button("Submit / Update Ranking", type="primary", use_container_width=True):
                         if save_submission(gc, person.strip(), st.session_state.ranking):
                             st.success("Ranking saved.")
                             st.session_state.ranking = []
                             st.rerun()
                 else:
-                    st.info("Add teams from the left to build your top 25.")
+                    st.caption("Add teams first")
 
 with tab2:
     st.subheader("Weighted Aggregate Top 25")
