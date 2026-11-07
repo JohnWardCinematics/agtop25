@@ -25,15 +25,28 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 MULTI_STYLE = """
+.sortable-component {
+    display: flex !important;
+    width: 75% !important;
+    gap: 12px;
+}
 .sortable-container {
-    background: #f9f9f9;
+    background: transparent !important;
     border-radius: 6px;
     padding: 8px;
-    margin: 0 4px;
+}
+.sortable-container:first-child {
+    flex: 1 !important;
+    min-width: 0;
+}
+.sortable-container:nth-child(2) {
+    flex: 2 !important;
+    min-width: 0;
 }
 .sortable-container-header {
     font-weight: 600;
     margin-bottom: 6px;
+    color: inherit;
 }
 .sortable-item {
     background-color: #D4AF37 !important;
@@ -47,13 +60,10 @@ MULTI_STYLE = """
 }
 .sortable-item:hover { background-color: #E6C200 !important; }
 
-/* Left container scrolls */
 .sortable-container:first-child .sortable-container-body {
     max-height: 720px !important;
     overflow-y: auto !important;
 }
-
-/* Center container fixed height for ~25 items */
 .sortable-container:nth-child(2) .sortable-container-body {
     min-height: 720px !important;
     max-height: 720px !important;
@@ -201,7 +211,6 @@ with tab1:
             available = [t for t in teams if t not in st.session_state.ranking]
             numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
 
-            # Single multi-container sortable spanning left + center
             containers = [
                 {"header": "Available Teams", "items": available},
                 {"header": f"{person.strip() or 'Your'} Rankings (drag to reorder)", "items": numbered}
@@ -215,7 +224,6 @@ with tab1:
                 custom_style=MULTI_STYLE
             )
 
-            # Pull ranking from the second container
             new_numbered = result[1]["items"][:25]
             new_ranking = [item.split(". ", 1)[1] if ". " in item else item for item in new_numbered]
 
@@ -223,9 +231,9 @@ with tab1:
                 st.session_state.ranking = new_ranking
                 st.rerun()
 
-            # Right column for submit (outside the sortable)
-            st.write("")  # spacer
-            _, _, col_right = st.columns([1, 2, 1])
+            # Right column for submit (outside the 75% sortable area)
+            st.write("")
+            _, _, col_right = st.columns([3, 0.1, 1])
             with col_right:
                 st.subheader("Submit")
                 if st.session_state.ranking:
