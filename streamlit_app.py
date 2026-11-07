@@ -9,17 +9,17 @@ from collections import defaultdict
 
 st.set_page_config(page_title="Top 25 Rankings", layout="wide")
 
-# CSS: left-align sortable text + yellow accents
+# Stronger CSS targeting sortable text alignment
 st.markdown("""
 <style>
-    /* Tabs yellow */
+    /* Tabs */
     button[data-baseweb="tab"][aria-selected="true"],
     button[data-baseweb="tab"]:hover {
         background-color: #D4AF37 !important;
         color: #1a1a1a !important;
     }
 
-    /* Buttons yellow */
+    /* Buttons */
     .stButton > button,
     button[kind="primary"] {
         background-color: #D4AF37 !important;
@@ -31,22 +31,31 @@ st.markdown("""
         background-color: #E6C200 !important;
     }
 
-    /* Force left alignment and yellow on sortable items */
+    /* Force left alignment on sortable items - multiple selectors */
     .sortable-item,
+    .sortable-item *,
     [class*="sortable"] li,
-    div[class*="sortable"] div {
+    [class*="sortable"] li *,
+    div[class*="sortable"] > div,
+    div[class*="sortable"] > div > div,
+    iframe[title*="sortables"] + div,
+    [data-testid="stVerticalBlock"] [class*="item"] {
         text-align: left !important;
         justify-content: flex-start !important;
         align-items: flex-start !important;
+        padding-left: 16px !important;
+    }
+
+    .sortable-item {
         background-color: #D4AF37 !important;
         color: #1a1a1a !important;
         padding: 10px 16px !important;
         margin: 3px 0 !important;
         border-radius: 5px !important;
-        display: flex !important;
+        display: block !important;
+        width: 100% !important;
     }
 
-    /* Container */
     [class*="sortable"] {
         min-height: 850px !important;
     }
@@ -200,7 +209,6 @@ with tab1:
                         st.session_state.ranking = new_ranking
                         st.rerun()
 
-                    # Nothing else below the sortable list
                     if st.button("Submit / Update Ranking", type="primary"):
                         if save_submission(gc, person.strip(), st.session_state.ranking):
                             st.success("Ranking saved.")
