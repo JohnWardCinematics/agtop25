@@ -59,7 +59,6 @@ ET = pytz.timezone("America/New_York")
 
 def get_current_week_range():
     now = datetime.now(ET)
-    # Monday = 0, Sunday = 6
     days_since_monday = now.weekday()
     monday = (now - timedelta(days=days_since_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
     sunday = monday + timedelta(days=6)
@@ -68,7 +67,15 @@ def get_current_week_range():
 
 def format_date_range():
     monday, sunday = get_current_week_range()
-    return f"{monday.strftime('%B %d %Y')} - {sunday.strftime('%B %d %Y')}"
+    def ordinal(n):
+        if 11 <= n % 100 <= 13:
+            suffix = "th"
+        else:
+            suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+        return f"{n}{suffix}"
+    def fmt(d):
+        return f"{d.strftime('%B')} {ordinal(d.day)}, '{d.strftime('%y')}"
+    return f"{fmt(monday)} - {fmt(sunday)}"
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
