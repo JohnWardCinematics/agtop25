@@ -12,7 +12,6 @@ st.set_page_config(page_title="Associated Goys Top 25 Poll", layout="wide")
 # Tabs + buttons styling
 st.markdown("""
 <style>
-    /* Tabs - larger font + yellow when selected or hovered */
     button[data-baseweb="tab"] {
         font-size: 1.15rem !important;
         font-weight: 600 !important;
@@ -24,8 +23,6 @@ st.markdown("""
         color: #1a1a1a !important;
         border-bottom: 3px solid #D4AF37 !important;
     }
-
-    /* Buttons */
     .stButton > button,
     button[kind="primary"] {
         background-color: #D4AF37 !important;
@@ -39,7 +36,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# CSS injected directly into the sortable component
+# CSS for the sortable blocks
 SORTABLE_STYLE = """
 .sortable-item {
     background-color: #D4AF37 !important;
@@ -190,18 +187,28 @@ with tab1:
                 st.subheader(f"{display_name} Rankings (drag to reorder)")
 
                 if st.session_state.ranking:
+                    # Always rebuild numbered list from current order
                     numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
+
+                    # Use a changing key so the component refreshes with new numbers
+                    sort_key = f"rank_{len(st.session_state.ranking)}_{hash(tuple(st.session_state.ranking))}"
 
                     reordered_numbered = sort_items(
                         numbered,
                         direction="vertical",
-                        key=f"rank_sort_{len(st.session_state.ranking)}",
+                        key=sort_key,
                         custom_style=SORTABLE_STYLE
                     )
 
-                    new_ranking = [item.split(". ", 1)[1] if ". " in item else item
-                                   for item in reordered_numbered]
+                    # Strip the old numbers and rebuild clean team list
+                    new_ranking = []
+                    for item in reordered_numbered:
+                        if ". " in item:
+                            new_ranking.append(item.split(". ", 1)[1])
+                        else:
+                            new_ranking.append(item)
 
+                    # Update and force rerun so numbers regenerate
                     if new_ranking != st.session_state.ranking:
                         st.session_state.ranking = new_ranking
                         st.rerun()
