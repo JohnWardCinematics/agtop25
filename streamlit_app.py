@@ -68,13 +68,14 @@ st.markdown("""
         color: #ffffff !important;
         font-weight: 700;
         font-size: 0.9rem;
-        margin-top: 4px;
+        margin-top: 10px;
     }
     .rank-numbers div {
         height: 28px;
         display: flex;
-        align-items: center;
+        align-items: flex-end;
         justify-content: flex-end;
+        padding-bottom: 4px;
     }
 </style>
 """, unsafe_allow_html=True)
