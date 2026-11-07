@@ -19,6 +19,12 @@ st.markdown("""
     button[data-baseweb="tab"]:hover { background-color: #D4AF37 !important; color: #1a1a1a !important; }
     .stButton > button, button[kind="primary"] {
         background-color: #D4AF37 !important; color: #1a1a1a !important; border: none !important;
+        text-align: left !important;
+        padding: 7px 12px !important;
+        margin: 2px 0 !important;
+        border-radius: 5px !important;
+        font-size: 0.92rem !important;
+        width: 100% !important;
     }
     .stButton > button:hover, button[kind="primary"]:hover { background-color: #E6C200 !important; }
 </style>
@@ -181,14 +187,13 @@ with tab1:
             col_left, col_center, col_right = st.columns([1, 2, 1])
 
             with col_left:
-                st.subheader("Available Teams")
+                st.subheader("Available Teams (click to add)")
                 available = [t for t in teams if t not in st.session_state.ranking]
-                left_result = sort_items(
-                    available,
-                    direction="vertical",
-                    key="left_list",
-                    custom_style=SORTABLE_STYLE
-                )
+                for team in available:
+                    if st.button(team, key=f"add_{team}", use_container_width=True):
+                        if len(st.session_state.ranking) < 25:
+                            st.session_state.ranking.append(team)
+                            st.rerun()
 
             with col_center:
                 display_name = person.strip() or "Your"
