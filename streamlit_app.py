@@ -6,7 +6,6 @@ from streamlit_sortables import sort_items
 from datetime import datetime
 import pytz
 from collections import defaultdict
-import time
 
 st.set_page_config(page_title="Top 25 Rankings", layout="wide")
 
@@ -62,7 +61,6 @@ def save_submission(gc, person, ranking):
             ws.update(f"A{row_num}:Z{row_num}", [row_data])
         else:
             ws.append_row(row_data)
-        # Clear cached results so the next view is fresh
         st.cache_data.clear()
         return True
     except Exception as e:
@@ -75,7 +73,6 @@ def load_results(_gc):
     if not sh:
         return pd.DataFrame()
     try:
-        # Submissions
         ws = sh.worksheet("Submissions")
         data = ws.get_all_records()
         if not data:
@@ -84,7 +81,6 @@ def load_results(_gc):
         df["Timestamp"] = pd.to_datetime(df["Timestamp"])
         latest = df.sort_values("Timestamp").groupby("Person").tail(1)
 
-        # Weights
         try:
             weights_df = pd.DataFrame(sh.worksheet("Weights").get_all_records())
         except Exception:
@@ -143,19 +139,24 @@ with tab1:
             with col2:
                 st.subheader("Your Ranking")
                 if st.session_state.ranking:
-                    # Drag-and-drop reorder
-                    new_order = sort_items(
-                        st.session_state.ranking,
+                    # Numbered list for display + drag-and-drop
+                    numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
+
+                    reordered_numbered = sort_items(
+                        numbered,
                         direction="vertical",
                         key="ranking_sortable"
                     )
-                    if new_order != st.session_state.ranking:
-                        st.session_state.ranking = new_order
+
+                    # Strip the rank numbers back off
+                    new_ranking = [item.split(". ", 1)[1] if ". " in item else item
+                                   for item in reordered_numbered]
+
+                    if new_ranking != st.session_state.ranking:
+                        st.session_state.ranking = new_ranking
                         st.rerun()
 
-                    st.markdown("**Current order**")
-                    for i, team in enumerate(st.session_state.ranking, 1):
-                        st.write(f"**{i}.** {team}")
+                    st.caption("Drag teams up or down to reorder. Numbers update automatically.")
 
                     if st.button("Submit / Update Ranking", type="primary"):
                         if save_submission(gc, person.strip(), st.session_state.ranking):
