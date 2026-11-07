@@ -1,0 +1,6 @@
+streamlit
+streamlit-sortables
+gspread
+google-auth
+pandas
+pytz
