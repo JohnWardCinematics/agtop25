@@ -7,16 +7,25 @@ from datetime import datetime
 import pytz
 from collections import defaultdict
 
-st.set_page_config(page_title="Top 25 Rankings", layout="wide")
+st.set_page_config(page_title="Associated Goys Top 25 Poll", layout="wide")
 
-# Yellow theme for tabs and buttons
+# Tabs + buttons styling
 st.markdown("""
 <style>
+    /* Tabs - larger font + yellow when selected or hovered */
+    button[data-baseweb="tab"] {
+        font-size: 1.15rem !important;
+        font-weight: 600 !important;
+        padding: 0.6rem 1.2rem !important;
+    }
     button[data-baseweb="tab"][aria-selected="true"],
     button[data-baseweb="tab"]:hover {
         background-color: #D4AF37 !important;
         color: #1a1a1a !important;
+        border-bottom: 3px solid #D4AF37 !important;
     }
+
+    /* Buttons */
     .stButton > button,
     button[kind="primary"] {
         background-color: #D4AF37 !important;
@@ -30,7 +39,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# CSS that actually styles the sortable blocks
+# CSS injected directly into the sortable component
 SORTABLE_STYLE = """
 .sortable-item {
     background-color: #D4AF37 !important;
@@ -148,7 +157,7 @@ def load_results(_gc):
         return pd.DataFrame()
 
 # --- UI ---
-st.title("Top 25 Rankings")
+st.title("Associated Goys Top 25 Poll")
 gc = get_gsheet_client()
 teams = load_teams()
 
