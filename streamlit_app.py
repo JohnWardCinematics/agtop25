@@ -11,9 +11,19 @@ st.set_page_config(page_title="Associated Goys Top 25 Poll", layout="wide")
 
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+
+    html, body, [class*="css"] {
+        font-family: 'Bebas Neue', sans-serif !important;
+    }
+    h1, h2, h3, h4, h5, h6, .stSubheader, .stMarkdown, button, .stButton > button {
+        font-family: 'Bebas Neue', sans-serif !important;
+        letter-spacing: 0.5px;
+    }
+
     .block-container { padding-top: 1rem !important; padding-bottom: 0.5rem !important; }
     h1 { font-size: 1.8rem !important; margin-bottom: 0.4rem !important; }
-    h2, h3 { font-size: 1.15rem !important; margin: 0.3rem 0 !important; }
+    h2, h3 { font-size: 1.15rem !important; margin: 0.3rem 0 !important; text-align: center !important; }
     button[data-baseweb="tab"] { font-size: 1.05rem !important; font-weight: 600 !important; padding: 0.4rem 1rem !important; }
     button[data-baseweb="tab"][aria-selected="true"],
     button[data-baseweb="tab"]:hover { background-color: #D4AF37 !important; color: #1a1a1a !important; }
@@ -51,6 +61,7 @@ CENTER_STYLE = """
     font-size: 0.85rem !important;
     line-height: 1.25 !important;
     min-height: 22px !important;
+    font-family: 'Bebas Neue', sans-serif !important;
 }
 .sortable-item:hover { background-color: #66BB6A !important; }
 """
