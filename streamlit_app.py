@@ -9,9 +9,10 @@ from collections import defaultdict
 
 st.set_page_config(page_title="Top 25 Rankings", layout="wide")
 
-# Force the sortable list to be tall and left-aligned
+# Styling: tall left-aligned sortable list + golden yellow accents
 st.markdown("""
 <style>
+    /* Sortable list height and left alignment */
     div[data-testid="column"] .sortable,
     .sortable-container,
     [class*="sortable"] {
@@ -22,6 +23,31 @@ st.markdown("""
         text-align: left !important;
         justify-content: flex-start !important;
         padding: 8px 12px !important;
+    }
+
+    /* Golden yellow for buttons and interactive elements */
+    .stButton > button {
+        background-color: #D4AF37 !important;
+        color: #1a1a1a !important;
+        border: none !important;
+    }
+    .stButton > button:hover {
+        background-color: #E6C200 !important;
+        color: #1a1a1a !important;
+    }
+    .stButton > button:active,
+    .stButton > button:focus {
+        background-color: #C5A028 !important;
+        color: #1a1a1a !important;
+    }
+
+    /* Primary button (Submit) */
+    button[kind="primary"] {
+        background-color: #D4AF37 !important;
+        color: #1a1a1a !important;
+    }
+    button[kind="primary"]:hover {
+        background-color: #E6C200 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -156,22 +182,24 @@ with tab1:
             with col2:
                 st.subheader("Your Ranking (drag to reorder)")
                 if st.session_state.ranking:
-                    # Drag-and-drop list
-                    reordered = sort_items(
-                        st.session_state.ranking.copy(),
+                    # Numbered items for the sortable list
+                    numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
+
+                    reordered_numbered = sort_items(
+                        numbered,
                         direction="vertical",
                         key=f"rank_sort_{len(st.session_state.ranking)}"
                     )
 
-                    # Update only if the order actually changed
-                    if reordered != st.session_state.ranking:
-                        st.session_state.ranking = reordered
+                    # Strip numbers to get clean team names
+                    new_ranking = [item.split(". ", 1)[1] if ". " in item else item
+                                   for item in reordered_numbered]
+
+                    if new_ranking != st.session_state.ranking:
+                        st.session_state.ranking = new_ranking
                         st.rerun()
 
-                    # Show numbered preview below the sortable box
-                    st.markdown("**Current order**")
-                    for i, team in enumerate(st.session_state.ranking, 1):
-                        st.write(f"**{i}.** {team}")
+                    st.caption("Drag teams up or down to reorder.")
 
                     if st.button("Submit / Update Ranking", type="primary"):
                         if save_submission(gc, person.strip(), st.session_state.ranking):
