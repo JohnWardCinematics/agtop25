@@ -61,6 +61,22 @@ st.markdown("""
         margin: 0.2rem 0 0.4rem 0 !important;
         text-align: center !important;
     }
+
+    .rank-numbers {
+        text-align: right;
+        padding-right: 8px;
+        line-height: 1.25;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-top: 28px;
+    }
+    .rank-numbers div {
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -243,23 +259,27 @@ with tab1:
             with col_center:
                 display_name = person.strip() or "Your"
                 st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
-                
-                # Always rebuild numbered list so ranks are correct
-                numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
-                
-                # Key changes on length (adds) and on content (reorders) so numbers update
-                center_result = sort_items(
-                    numbered,
-                    direction="vertical",
-                    key=f"ranking_{len(st.session_state.ranking)}_{hash(tuple(st.session_state.ranking))}",
-                    custom_style=CENTER_STYLE
-                )
-                
-                new_ranking = [item.split(". ", 1)[1] if ". " in item else item for item in center_result]
-                
-                if new_ranking != st.session_state.ranking:
-                    st.session_state.ranking = new_ranking
-                    st.rerun()
+
+                # Numbers + sortable side by side
+                num_col, sort_col = st.columns([0.12, 0.88])
+
+                with num_col:
+                    numbers_html = '<div class="rank-numbers">'
+                    for i in range(1, 26):
+                        numbers_html += f'<div>{i}</div>'
+                    numbers_html += '</div>'
+                    st.markdown(numbers_html, unsafe_allow_html=True)
+
+                with sort_col:
+                    center_result = sort_items(
+                        st.session_state.ranking,
+                        direction="vertical",
+                        key=f"ranking_{len(st.session_state.ranking)}",
+                        custom_style=CENTER_STYLE
+                    )
+                    if center_result != st.session_state.ranking:
+                        st.session_state.ranking = center_result
+                        st.rerun()
 
             with col_right:
                 st.subheader("Submit")
