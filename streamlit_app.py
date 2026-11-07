@@ -24,7 +24,30 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-SORTABLE_STYLE = """
+MULTI_STYLE = """
+.sortable-component {
+    display: flex !important;
+    width: 100% !important;
+    gap: 12px;
+}
+.sortable-container {
+    background: transparent !important;
+    border-radius: 6px;
+    padding: 4px;
+}
+.sortable-container:first-child {
+    flex: 0 0 25% !important;
+    max-width: 25% !important;
+}
+.sortable-container:nth-child(2) {
+    flex: 0 0 50% !important;
+    max-width: 50% !important;
+}
+.sortable-container-header {
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 1.05rem;
+}
 .sortable-item {
     background-color: #D4AF37 !important;
     color: #1a1a1a !important;
@@ -33,8 +56,19 @@ SORTABLE_STYLE = """
     margin: 3px 0 !important;
     border-radius: 5px !important;
     font-size: 0.92rem !important;
+    cursor: grab;
 }
 .sortable-item:hover { background-color: #E6C200 !important; }
+
+.sortable-container:first-child .sortable-container-body {
+    max-height: 720px !important;
+    overflow-y: auto !important;
+}
+.sortable-container:nth-child(2) .sortable-container-body {
+    min-height: 720px !important;
+    max-height: 720px !important;
+    overflow-y: hidden !important;
+}
 """
 
 ET = pytz.timezone("America/New_York")
@@ -174,45 +208,9 @@ with tab1:
             if "ranking" not in st.session_state:
                 st.session_state.ranking = []
 
-            col_left, col_center, col_right = st.columns([1, 2, 1])
-
-            with col_left:
-                st.subheader("Available Teams")
-                available = [t for t in teams if t not in st.session_state.ranking]
-                # Scrollable container via CSS height on the sortable
-                left_containers = [{"header": "", "items": available}]
-                left_result = sort_items(
-                    left_containers,
-                    multi_containers=True,
-                    direction="vertical",
-                    key="left_available",
-                    custom_style=SORTABLE_STYLE + """
-                    .sortable-container-body { max-height: 720px !important; overflow-y: auto !important; }
-                    """
-                )
-
-            with col_center:
-                display_name = person.strip() or "Your"
-                st.subheader(f"{display_name} Rankings (drag to reorder)")
-                numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
-                center_containers = [{"header": "", "items": numbered}]
-                center_result = sort_items(
-                    center_containers,
-                    multi_containers=True,
-                    direction="vertical",
-                    key=f"center_{len(st.session_state.ranking)}_{hash(tuple(st.session_state.ranking))}",
-                    custom_style=SORTABLE_STYLE + """
-                    .sortable-container-body { min-height: 720px !important; max-height: 720px !important; overflow-y: hidden !important; }
-                    """
-                )
-                new_numbered = center_result[0]["items"][:25]
-                new_ranking = [item.split(". ", 1)[1] if ". " in item else item for item in new_numbered]
-                if new_ranking != st.session_state.ranking:
-                    st.session_state.ranking = new_ranking
-                    st.rerun()
-
-            with col_right:
-                st.subheader("Submit")
+            # Top-right Submit button
+            _, col_submit = st.columns([3, 1])
+            with col_submit:
                 if st.session_state.ranking:
                     if st.button("Submit / Update Ranking", type="primary", use_container_width=True):
                         if save_submission(gc, person.strip(), st.session_state.ranking):
@@ -220,7 +218,30 @@ with tab1:
                             st.session_state.ranking = []
                             st.rerun()
                 else:
-                    st.caption("Drag teams into the center column")
+                    st.button("Submit / Update Ranking", disabled=True, use_container_width=True)
+
+            available = [t for t in teams if t not in st.session_state.ranking]
+            numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
+
+            containers = [
+                {"header": "Available Teams", "items": available},
+                {"header": f"{person.strip() or 'Your'} Rankings (drag to reorder)", "items": numbered}
+            ]
+
+            result = sort_items(
+                containers,
+                multi_containers=True,
+                direction="vertical",
+                key=f"dnd_{len(st.session_state.ranking)}_{hash(tuple(st.session_state.ranking))}",
+                custom_style=MULTI_STYLE
+            )
+
+            new_numbered = result[1]["items"][:25]
+            new_ranking = [item.split(". ", 1)[1] if ". " in item else item for item in new_numbered]
+
+            if new_ranking != st.session_state.ranking:
+                st.session_state.ranking = new_ranking
+                st.rerun()
 
 with tab2:
     st.subheader("Weighted Aggregate Top 25")
