@@ -9,17 +9,14 @@ from collections import defaultdict
 
 st.set_page_config(page_title="Top 25 Rankings", layout="wide")
 
-# Stronger CSS targeting sortable text alignment
+# Yellow theme for tabs and buttons
 st.markdown("""
 <style>
-    /* Tabs */
     button[data-baseweb="tab"][aria-selected="true"],
     button[data-baseweb="tab"]:hover {
         background-color: #D4AF37 !important;
         color: #1a1a1a !important;
     }
-
-    /* Buttons */
     .stButton > button,
     button[kind="primary"] {
         background-color: #D4AF37 !important;
@@ -30,37 +27,27 @@ st.markdown("""
     button[kind="primary"]:hover {
         background-color: #E6C200 !important;
     }
-
-    /* Force left alignment on sortable items - multiple selectors */
-    .sortable-item,
-    .sortable-item *,
-    [class*="sortable"] li,
-    [class*="sortable"] li *,
-    div[class*="sortable"] > div,
-    div[class*="sortable"] > div > div,
-    iframe[title*="sortables"] + div,
-    [data-testid="stVerticalBlock"] [class*="item"] {
-        text-align: left !important;
-        justify-content: flex-start !important;
-        align-items: flex-start !important;
-        padding-left: 16px !important;
-    }
-
-    .sortable-item {
-        background-color: #D4AF37 !important;
-        color: #1a1a1a !important;
-        padding: 10px 16px !important;
-        margin: 3px 0 !important;
-        border-radius: 5px !important;
-        display: block !important;
-        width: 100% !important;
-    }
-
-    [class*="sortable"] {
-        min-height: 850px !important;
-    }
 </style>
 """, unsafe_allow_html=True)
+
+# CSS that actually styles the sortable blocks
+SORTABLE_STYLE = """
+.sortable-item {
+    background-color: #D4AF37 !important;
+    color: #1a1a1a !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    padding: 10px 16px !important;
+    margin: 4px 0 !important;
+    border-radius: 6px !important;
+    font-weight: 500;
+    display: block !important;
+    width: 100% !important;
+}
+.sortable-item:hover {
+    background-color: #E6C200 !important;
+}
+"""
 
 ET = pytz.timezone("America/New_York")
 SCOPES = [
@@ -199,7 +186,8 @@ with tab1:
                     reordered_numbered = sort_items(
                         numbered,
                         direction="vertical",
-                        key=f"rank_sort_{len(st.session_state.ranking)}"
+                        key=f"rank_sort_{len(st.session_state.ranking)}",
+                        custom_style=SORTABLE_STYLE
                     )
 
                     new_ranking = [item.split(". ", 1)[1] if ". " in item else item
