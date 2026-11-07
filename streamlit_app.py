@@ -246,17 +246,16 @@ with tab1:
                 
                 numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
                 
-                # More stable key reduces full remounts
+                # Key changes when length changes (so adds show up) but stays stable during reorders
                 center_result = sort_items(
                     numbered,
                     direction="vertical",
-                    key="ranking_sortable",
+                    key=f"ranking_{len(st.session_state.ranking)}",
                     custom_style=CENTER_STYLE
                 )
                 
                 new_ranking = [item.split(". ", 1)[1] if ". " in item else item for item in center_result]
                 
-                # Only update + rerun if the order actually changed
                 if new_ranking != st.session_state.ranking and len(new_ranking) == len(st.session_state.ranking):
                     st.session_state.ranking = new_ranking
                     st.rerun()
