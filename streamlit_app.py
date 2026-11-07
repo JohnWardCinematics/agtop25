@@ -2,11 +2,29 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+from streamlit_sortables import sort_items
 from datetime import datetime
 import pytz
 from collections import defaultdict
 
 st.set_page_config(page_title="Top 25 Rankings", layout="wide")
+
+# Force the sortable list to be tall and left-aligned
+st.markdown("""
+<style>
+    div[data-testid="column"] .sortable,
+    .sortable-container,
+    [class*="sortable"] {
+        min-height: 800px !important;
+        text-align: left !important;
+    }
+    .sortable-item {
+        text-align: left !important;
+        justify-content: flex-start !important;
+        padding: 8px 12px !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 ET = pytz.timezone("America/New_York")
 SCOPES = [
@@ -136,29 +154,25 @@ with tab1:
                             st.rerun()
 
             with col2:
-                st.subheader("Your Ranking")
+                st.subheader("Your Ranking (drag to reorder)")
                 if st.session_state.ranking:
-                    # Display each team with Up / Down buttons
-                    for i, team in enumerate(st.session_state.ranking):
-                        c_rank, c_name, c_up, c_down = st.columns([1, 6, 1, 1])
-                        c_rank.markdown(f"**{i+1}.**")
-                        c_name.write(team)
+                    # Drag-and-drop list
+                    reordered = sort_items(
+                        st.session_state.ranking.copy(),
+                        direction="vertical",
+                        key=f"rank_sort_{len(st.session_state.ranking)}"
+                    )
 
-                        # Up button
-                        if c_up.button("↑", key=f"up_{i}", disabled=(i == 0)):
-                            # Swap with previous
-                            st.session_state.ranking[i], st.session_state.ranking[i-1] = \
-                                st.session_state.ranking[i-1], st.session_state.ranking[i]
-                            st.rerun()
+                    # Update only if the order actually changed
+                    if reordered != st.session_state.ranking:
+                        st.session_state.ranking = reordered
+                        st.rerun()
 
-                        # Down button
-                        if c_down.button("↓", key=f"down_{i}", disabled=(i == len(st.session_state.ranking)-1)):
-                            # Swap with next
-                            st.session_state.ranking[i], st.session_state.ranking[i+1] = \
-                                st.session_state.ranking[i+1], st.session_state.ranking[i]
-                            st.rerun()
+                    # Show numbered preview below the sortable box
+                    st.markdown("**Current order**")
+                    for i, team in enumerate(st.session_state.ranking, 1):
+                        st.write(f"**{i}.** {team}")
 
-                    st.divider()
                     if st.button("Submit / Update Ranking", type="primary"):
                         if save_submission(gc, person.strip(), st.session_state.ranking):
                             st.success("Ranking saved.")
