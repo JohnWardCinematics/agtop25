@@ -9,56 +9,51 @@ from collections import defaultdict
 
 st.set_page_config(page_title="Top 25 Rankings", layout="wide")
 
-# Styling: yellow accents for tabs, buttons, and sortable items
+# Stronger CSS for yellow tabs + yellow sortable blocks + left align
 st.markdown("""
 <style>
-    /* Tabs */
-    .stTabs [data-baseweb="tab-list"] button {
+    /* Tabs - force yellow */
+    button[data-baseweb="tab"] {
         color: #1a1a1a !important;
+        background-color: transparent !important;
     }
-    .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
+    button[data-baseweb="tab"][aria-selected="true"],
+    button[data-baseweb="tab"]:hover {
         background-color: #D4AF37 !important;
         color: #1a1a1a !important;
-        border-bottom: 2px solid #D4AF37 !important;
-    }
-    .stTabs [data-baseweb="tab-list"] button:hover {
-        background-color: #E6C200 !important;
-        color: #1a1a1a !important;
+        border-bottom-color: #D4AF37 !important;
     }
 
-    /* Buttons */
-    .stButton > button {
+    /* All buttons yellow */
+    .stButton > button,
+    button[kind="primary"] {
         background-color: #D4AF37 !important;
         color: #1a1a1a !important;
         border: none !important;
     }
-    .stButton > button:hover {
-        background-color: #E6C200 !important;
-        color: #1a1a1a !important;
-    }
-    button[kind="primary"] {
-        background-color: #D4AF37 !important;
-        color: #1a1a1a !important;
-    }
+    .stButton > button:hover,
     button[kind="primary"]:hover {
         background-color: #E6C200 !important;
+        color: #1a1a1a !important;
     }
 
-    /* Sortable items */
-    .sortable-item {
+    /* Sortable items yellow + left aligned */
+    .sortable-item,
+    [class*="sortable"] li,
+    div[class*="sortable"] > div {
         background-color: #D4AF37 !important;
         color: #1a1a1a !important;
         text-align: left !important;
         justify-content: flex-start !important;
-        padding: 8px 12px !important;
-        border-radius: 4px;
-        margin-bottom: 4px;
+        padding: 10px 14px !important;
+        border-radius: 6px !important;
+        margin: 4px 0 !important;
+        font-weight: 500;
     }
-    div[data-testid="column"] .sortable,
-    .sortable-container,
+
+    /* Container height */
     [class*="sortable"] {
-        min-height: 800px !important;
-        text-align: left !important;
+        min-height: 850px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -191,15 +186,17 @@ with tab1:
                             st.rerun()
 
             with col2:
-                st.subheader("Your Ranking (drag to reorder)")
+                display_name = person.strip() or "Your"
+                st.subheader(f"{display_name} Rankings (drag to reorder)")
+
                 if st.session_state.ranking:
-                    # Numbered items for drag-and-drop
+                    # Numbered blocks
                     numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
 
                     reordered_numbered = sort_items(
                         numbered,
                         direction="vertical",
-                        key=f"rank_sort_{len(st.session_state.ranking)}"
+                        key=f"rank_sort_{len(st.session_state.ranking)}_{hash(tuple(st.session_state.ranking))}"
                     )
 
                     new_ranking = [item.split(". ", 1)[1] if ". " in item else item
@@ -209,12 +206,14 @@ with tab1:
                         st.session_state.ranking = new_ranking
                         st.rerun()
 
-                    # Remove buttons under the sortable list
-                    st.caption("Drag to reorder. Use Remove to undo an add.")
+                    # Compact remove controls right under the list (no extra "Current Order" text)
+                    st.write("")  # small spacer
+                    remove_cols = st.columns([5, 1])
+                    remove_cols[0].caption("Click Remove next to any team to undo")
                     for i, team in enumerate(st.session_state.ranking):
-                        c_name, c_remove = st.columns([5, 1])
-                        c_name.write(f"{i+1}. {team}")
-                        if c_remove.button("Remove", key=f"remove_{i}"):
+                        rc1, rc2 = st.columns([6, 1])
+                        rc1.markdown(f"**{i+1}.** {team}")
+                        if rc2.button("✕", key=f"rm_{i}", help="Remove"):
                             st.session_state.ranking.pop(i)
                             st.rerun()
 
