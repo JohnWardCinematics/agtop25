@@ -64,12 +64,12 @@ st.markdown("""
 
     .rank-numbers {
         text-align: right;
-        padding-right: 8px;
-        line-height: 1.25;
-        font-size: 0.9rem;
+        padding-right: 6px;
+        color: #ffffff !important;
         font-weight: 700;
-        color: #1a1a1a;
-        margin-top: 28px;
+        font-size: 0.9rem;
+        line-height: 1;
+        margin-top: 4px;
     }
     .rank-numbers div {
         height: 28px;
@@ -260,8 +260,7 @@ with tab1:
                 display_name = person.strip() or "Your"
                 st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
 
-                # Numbers + sortable side by side
-                num_col, sort_col = st.columns([0.12, 0.88])
+                num_col, sort_col = st.columns([0.1, 0.9])
 
                 with num_col:
                     numbers_html = '<div class="rank-numbers">'
