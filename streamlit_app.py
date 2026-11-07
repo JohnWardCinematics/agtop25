@@ -27,6 +27,15 @@ st.markdown("""
         width: 100% !important;
     }
     .stButton > button:hover, button[kind="primary"]:hover { background-color: #E6C200 !important; }
+
+    /* Left column scroll container */
+    .left-scroll {
+        max-height: 720px !important;
+        height: 720px !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        padding-right: 4px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -197,11 +206,14 @@ with tab1:
             with col_left:
                 st.subheader("Available Teams (click to add)")
                 available = [t for t in teams if t not in st.session_state.ranking]
+                # Scrollable container locked to same height as center
+                st.markdown('<div class="left-scroll">', unsafe_allow_html=True)
                 for team in available:
                     if st.button(team, key=f"add_{team}", use_container_width=True):
                         if len(st.session_state.ranking) < 25:
                             st.session_state.ranking.append(team)
                             st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with col_center:
                 display_name = person.strip() or "Your"
