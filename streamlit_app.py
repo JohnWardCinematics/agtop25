@@ -32,7 +32,7 @@ def is_open():
 def load_teams(gc):
     sh = gc.open_by_url(st.secrets["gsheets"]["spreadsheet_url"])
     ws = sh.worksheet("Teams")
-    return [r[0] for r in ws.get_all_values()[1:] if r]
+    return [r[0] for r in ws.get_all_values()[1:] if r and r[0].strip()]
 
 def get_latest_submissions(gc):
     sh = gc.open_by_url(st.secrets["gsheets"]["spreadsheet_url"])
@@ -67,7 +67,7 @@ def aggregate(gc):
     sh = gc.open_by_url(st.secrets["gsheets"]["spreadsheet_url"])
     try:
         weights_df = pd.DataFrame(sh.worksheet("Weights").get_all_records())
-    except:
+    except Exception:
         weights_df = pd.DataFrame()
     points = defaultdict(float)
     firsts = defaultdict(int)
@@ -100,24 +100,31 @@ with tab1:
         person = st.text_input("Your name (used to identify & overwrite your ballot)")
         if person:
             teams = load_teams(gc)
+
             # Two-column drag-and-drop
             containers = [
                 {"header": "Available Teams", "items": teams},
-                {"header": "Your Ranking (top = #1)", "items": []}
+                {"header": "Your Ranking (drag here — top = #1)", "items": []}
             ]
+
             result = sort_items(containers, multi_containers=True, key="ranking_dnd")
-            
-            ranked = result[1]["items"][:25]  # cap at 25
+            ranked = result[1]["items"][:25]
+
+            # Live numbered preview
+            st.subheader("Live Ranking Preview")
             if ranked:
-                st.subheader("Current ranking preview")
+                cols = st.columns([1, 4])
                 for i, team in enumerate(ranked, 1):
-                    st.write(f"**{i}.** {team}")
-                
-                if st.button("Submit / Update Ranking", type="primary"):
-                    save_submission(gc, person.strip(), ranked)
-                    st.success("Ranking saved (previous submission overwritten if it existed).")
+                    cols[0].markdown(f"**{i}.**")
+                    cols[1].write(team)
+                if len(ranked) < 25:
+                    st.caption(f"{25 - len(ranked)} slots remaining")
             else:
-                st.info("Drag teams from the left into the right column to build your ranking.")
+                st.info("Drag teams from the left column into the right column. Reorder them as needed.")
+
+            if ranked and st.button("Submit / Update Ranking", type="primary"):
+                save_submission(gc, person.strip(), ranked)
+                st.success("Ranking saved (previous submission overwritten if it existed).")
 
 with tab2:
     st.subheader("Weighted Aggregate Top 25")
