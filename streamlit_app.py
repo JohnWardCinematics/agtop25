@@ -30,20 +30,24 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-SORTABLE_STYLE = """
+# Center column style: compact enough for exactly 25 items
+CENTER_STYLE = """
 .sortable-item {
     background-color: #D4AF37 !important;
     color: #1a1a1a !important;
     text-align: left !important;
-    padding: 7px 12px !important;
-    margin: 3px 0 !important;
-    border-radius: 5px !important;
-    font-size: 0.92rem !important;
+    padding: 3px 10px !important;
+    margin: 1px 0 !important;
+    border-radius: 4px !important;
+    font-size: 0.85rem !important;
+    line-height: 1.25 !important;
+    min-height: 22px !important;
 }
 .sortable-item:hover { background-color: #E6C200 !important; }
 .sortable-container-body {
     max-height: 720px !important;
-    overflow-y: auto !important;
+    min-height: 720px !important;
+    overflow-y: hidden !important;
 }
 """
 
@@ -203,7 +207,7 @@ with tab1:
                     numbered,
                     direction="vertical",
                     key=f"center_{len(st.session_state.ranking)}_{hash(tuple(st.session_state.ranking))}",
-                    custom_style=SORTABLE_STYLE + ".sortable-container-body { overflow-y: hidden !important; min-height: 720px; }"
+                    custom_style=CENTER_STYLE
                 )
                 new_ranking = [item.split(". ", 1)[1] if ". " in item else item for item in center_result]
                 if new_ranking != st.session_state.ranking:
