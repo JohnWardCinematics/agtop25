@@ -9,22 +9,17 @@ from collections import defaultdict
 
 st.set_page_config(page_title="Top 25 Rankings", layout="wide")
 
-# Stronger CSS for yellow tabs + yellow sortable blocks + left align
+# CSS: left-align sortable text + yellow accents
 st.markdown("""
 <style>
-    /* Tabs - force yellow */
-    button[data-baseweb="tab"] {
-        color: #1a1a1a !important;
-        background-color: transparent !important;
-    }
+    /* Tabs yellow */
     button[data-baseweb="tab"][aria-selected="true"],
     button[data-baseweb="tab"]:hover {
         background-color: #D4AF37 !important;
         color: #1a1a1a !important;
-        border-bottom-color: #D4AF37 !important;
     }
 
-    /* All buttons yellow */
+    /* Buttons yellow */
     .stButton > button,
     button[kind="primary"] {
         background-color: #D4AF37 !important;
@@ -34,24 +29,24 @@ st.markdown("""
     .stButton > button:hover,
     button[kind="primary"]:hover {
         background-color: #E6C200 !important;
-        color: #1a1a1a !important;
     }
 
-    /* Sortable items yellow + left aligned */
+    /* Force left alignment and yellow on sortable items */
     .sortable-item,
     [class*="sortable"] li,
-    div[class*="sortable"] > div {
-        background-color: #D4AF37 !important;
-        color: #1a1a1a !important;
+    div[class*="sortable"] div {
         text-align: left !important;
         justify-content: flex-start !important;
-        padding: 10px 14px !important;
-        border-radius: 6px !important;
-        margin: 4px 0 !important;
-        font-weight: 500;
+        align-items: flex-start !important;
+        background-color: #D4AF37 !important;
+        color: #1a1a1a !important;
+        padding: 10px 16px !important;
+        margin: 3px 0 !important;
+        border-radius: 5px !important;
+        display: flex !important;
     }
 
-    /* Container height */
+    /* Container */
     [class*="sortable"] {
         min-height: 850px !important;
     }
@@ -190,13 +185,12 @@ with tab1:
                 st.subheader(f"{display_name} Rankings (drag to reorder)")
 
                 if st.session_state.ranking:
-                    # Numbered blocks
                     numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
 
                     reordered_numbered = sort_items(
                         numbered,
                         direction="vertical",
-                        key=f"rank_sort_{len(st.session_state.ranking)}_{hash(tuple(st.session_state.ranking))}"
+                        key=f"rank_sort_{len(st.session_state.ranking)}"
                     )
 
                     new_ranking = [item.split(". ", 1)[1] if ". " in item else item
@@ -206,17 +200,7 @@ with tab1:
                         st.session_state.ranking = new_ranking
                         st.rerun()
 
-                    # Compact remove controls right under the list (no extra "Current Order" text)
-                    st.write("")  # small spacer
-                    remove_cols = st.columns([5, 1])
-                    remove_cols[0].caption("Click Remove next to any team to undo")
-                    for i, team in enumerate(st.session_state.ranking):
-                        rc1, rc2 = st.columns([6, 1])
-                        rc1.markdown(f"**{i+1}.** {team}")
-                        if rc2.button("✕", key=f"rm_{i}", help="Remove"):
-                            st.session_state.ranking.pop(i)
-                            st.rerun()
-
+                    # Nothing else below the sortable list
                     if st.button("Submit / Update Ranking", type="primary"):
                         if save_submission(gc, person.strip(), st.session_state.ranking):
                             st.success("Ranking saved.")
