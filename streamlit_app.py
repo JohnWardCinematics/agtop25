@@ -30,8 +30,17 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Center column style: compact enough for exactly 25 items
+# Center column style: compact + matching background
 CENTER_STYLE = """
+.sortable-container {
+    background: transparent !important;
+}
+.sortable-container-body {
+    background: transparent !important;
+    max-height: 720px !important;
+    min-height: 720px !important;
+    overflow-y: hidden !important;
+}
 .sortable-item {
     background-color: #D4AF37 !important;
     color: #1a1a1a !important;
@@ -44,11 +53,6 @@ CENTER_STYLE = """
     min-height: 22px !important;
 }
 .sortable-item:hover { background-color: #E6C200 !important; }
-.sortable-container-body {
-    max-height: 720px !important;
-    min-height: 720px !important;
-    overflow-y: hidden !important;
-}
 """
 
 ET = pytz.timezone("America/New_York")
