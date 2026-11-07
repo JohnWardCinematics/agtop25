@@ -68,10 +68,10 @@ st.markdown("""
         color: #ffffff !important;
         font-weight: 700;
         font-size: 0.9rem;
-        margin-top: 8px;
+        margin-top: 6px;
     }
     .rank-numbers div {
-        height: 28px;
+        height: 30px;
         display: flex;
         align-items: center;
         justify-content: flex-end;
@@ -79,15 +79,15 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Restored green block style that fits 25
+# Green blocks sized for 30px total height
 CENTER_STYLE = """
 .sortable-container {
     background: transparent !important;
 }
 .sortable-container-body {
     background: transparent !important;
-    max-height: 680px !important;
-    min-height: 680px !important;
+    max-height: 750px !important;
+    min-height: 750px !important;
     overflow-y: hidden !important;
 }
 .sortable-item {
@@ -95,11 +95,13 @@ CENTER_STYLE = """
     color: #1a1a1a !important;
     text-align: left !important;
     padding: 3px 10px !important;
-    margin: 1px 0 !important;
+    margin: 0 !important;
     border-radius: 4px !important;
     font-size: 0.9rem !important;
-    line-height: 1.25 !important;
-    min-height: 22px !important;
+    line-height: 1.2 !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    box-sizing: border-box !important;
     font-family: 'Bebas Neue', sans-serif !important;
     letter-spacing: 2px !important;
     font-weight: 700 !important;
@@ -249,7 +251,7 @@ with tab1:
             with col_left:
                 st.subheader("Available Teams (click to add)")
                 available = [t for t in teams if t not in st.session_state.ranking]
-                with st.container(height=680):
+                with st.container(height=750):
                     for team in available:
                         if st.button(team, key=f"add_{team}", use_container_width=True):
                             if len(st.session_state.ranking) < 25:
