@@ -24,18 +24,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Multi-container style: left scrollable, center fixed for 25
-MULTI_STYLE = """
-.sortable-container {
-    background-color: #f8f8f8;
-    border-radius: 6px;
-    padding: 8px;
-}
-.sortable-container-header {
-    font-weight: 600;
-    margin-bottom: 6px;
-    color: #1a1a1a;
-}
+SORTABLE_STYLE = """
 .sortable-item {
     background-color: #D4AF37 !important;
     color: #1a1a1a !important;
@@ -44,22 +33,8 @@ MULTI_STYLE = """
     margin: 3px 0 !important;
     border-radius: 5px !important;
     font-size: 0.92rem !important;
-    cursor: grab;
 }
 .sortable-item:hover { background-color: #E6C200 !important; }
-
-/* Left container scrolls */
-.sortable-container:first-child .sortable-container-body {
-    max-height: 720px !important;
-    overflow-y: auto !important;
-}
-
-/* Center container fits exactly ~25 items, no scroll */
-.sortable-container:nth-child(2) .sortable-container-body {
-    min-height: 720px !important;
-    max-height: 720px !important;
-    overflow-y: hidden !important;
-}
 """
 
 ET = pytz.timezone("America/New_York")
@@ -199,37 +174,43 @@ with tab1:
             if "ranking" not in st.session_state:
                 st.session_state.ranking = []
 
-            available = [t for t in teams if t not in st.session_state.ranking]
-            numbered_ranking = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
+            col_left, col_center, col_right = st.columns([1, 2, 1])
 
-            containers = [
-                {"header": "Available Teams", "items": available},
-                {"header": f"{person.strip() or 'Your'} Rankings (drag to reorder)", "items": numbered_ranking}
-            ]
+            with col_left:
+                st.subheader("Available Teams")
+                available = [t for t in teams if t not in st.session_state.ranking]
+                # Scrollable container via CSS height on the sortable
+                left_containers = [{"header": "", "items": available}]
+                left_result = sort_items(
+                    left_containers,
+                    multi_containers=True,
+                    direction="vertical",
+                    key="left_available",
+                    custom_style=SORTABLE_STYLE + """
+                    .sortable-container-body { max-height: 720px !important; overflow-y: auto !important; }
+                    """
+                )
 
-            result = sort_items(
-                containers,
-                multi_containers=True,
-                direction="vertical",
-                key=f"dnd_{len(st.session_state.ranking)}_{hash(tuple(st.session_state.ranking))}",
-                custom_style=MULTI_STYLE
-            )
+            with col_center:
+                display_name = person.strip() or "Your"
+                st.subheader(f"{display_name} Rankings (drag to reorder)")
+                numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
+                center_containers = [{"header": "", "items": numbered}]
+                center_result = sort_items(
+                    center_containers,
+                    multi_containers=True,
+                    direction="vertical",
+                    key=f"center_{len(st.session_state.ranking)}_{hash(tuple(st.session_state.ranking))}",
+                    custom_style=SORTABLE_STYLE + """
+                    .sortable-container-body { min-height: 720px !important; max-height: 720px !important; overflow-y: hidden !important; }
+                    """
+                )
+                new_numbered = center_result[0]["items"][:25]
+                new_ranking = [item.split(". ", 1)[1] if ". " in item else item for item in new_numbered]
+                if new_ranking != st.session_state.ranking:
+                    st.session_state.ranking = new_ranking
+                    st.rerun()
 
-            # Extract new ranking from center container
-            new_numbered = result[1]["items"][:25]
-            new_ranking = []
-            for item in new_numbered:
-                if ". " in item:
-                    new_ranking.append(item.split(". ", 1)[1])
-                else:
-                    new_ranking.append(item)
-
-            if new_ranking != st.session_state.ranking:
-                st.session_state.ranking = new_ranking
-                st.rerun()
-
-            # Right column for submit only
-            _, _, col_right = st.columns([1, 2, 1])
             with col_right:
                 st.subheader("Submit")
                 if st.session_state.ranking:
