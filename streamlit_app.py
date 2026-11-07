@@ -244,19 +244,20 @@ with tab1:
                 display_name = person.strip() or "Your"
                 st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
                 
+                # Always rebuild numbered list so ranks are correct
                 numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
                 
-                # Key changes when length changes (so adds show up) but stays stable during reorders
+                # Key changes on length (adds) and on content (reorders) so numbers update
                 center_result = sort_items(
                     numbered,
                     direction="vertical",
-                    key=f"ranking_{len(st.session_state.ranking)}",
+                    key=f"ranking_{len(st.session_state.ranking)}_{hash(tuple(st.session_state.ranking))}",
                     custom_style=CENTER_STYLE
                 )
                 
                 new_ranking = [item.split(". ", 1)[1] if ". " in item else item for item in center_result]
                 
-                if new_ranking != st.session_state.ranking and len(new_ranking) == len(st.session_state.ranking):
+                if new_ranking != st.session_state.ranking:
                     st.session_state.ranking = new_ranking
                     st.rerun()
 
