@@ -6,10 +6,10 @@ from streamlit_sortables import sort_items
 from datetime import datetime
 import pytz
 from collections import defaultdict
+import time
 
 st.set_page_config(page_title="Top 25 Rankings", layout="wide")
 
-# --- Config ---
 ET = pytz.timezone("America/New_York")
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -29,29 +29,49 @@ def is_open():
         return False
     return True
 
-@st.cache_data(ttl=60)
-def load_teams(_gc):
+@st.cache_data
+def load_teams():
     try:
-        sh = _gc.open_by_url(st.secrets["gsheets"]["spreadsheet_url"])
-        ws = sh.worksheet("Teams")
-        values = ws.get_all_values()
-        return [r[0].strip() for r in values[1:] if r and r[0].strip()]
+        df = pd.read_csv("teams.csv")
+        return df["Team"].dropna().astype(str).str.strip().tolist()
     except Exception as e:
-        st.error(f"Could not load teams: {e}")
+        st.error(f"Could not load teams.csv: {e}")
         return []
 
+def open_sheet(gc, retries=3):
+    url = st.secrets["gsheets"]["spreadsheet_url"]
+    for i in range(retries):
+        try:
+            return gc.open_by_url(url)
+        except Exception as e:
+            if i == retries - 1:
+                st.error(f"Could not open Google Sheet: {type(e).__name__}")
+                st.code(str(e))
+                return None
+            time.sleep(1.5)
+    return None
+
 def get_latest_submissions(gc):
-    sh = gc.open_by_url(st.secrets["gsheets"]["spreadsheet_url"])
-    ws = sh.worksheet("Submissions")
-    data = ws.get_all_records()
-    if not data:
+    sh = open_sheet(gc)
+    if not sh:
         return pd.DataFrame()
-    df = pd.DataFrame(data)
-    df["Timestamp"] = pd.to_datetime(df["Timestamp"])
-    return df.sort_values("Timestamp").groupby("Person").tail(1)
+    try:
+        ws = sh.worksheet("Submissions")
+        data = ws.get_all_records()
+        if not data:
+            return pd.DataFrame()
+        df = pd.DataFrame(data)
+        df["Timestamp"] = pd.to_datetime(df["Timestamp"])
+        return df.sort_values("Timestamp").groupby("Person").tail(1)
+    except Exception as e:
+        st.error(f"Error reading submissions: {e}")
+        return pd.DataFrame()
 
 def save_submission(gc, person, ranking):
-    sh = gc.open_by_url(st.secrets["gsheets"]["spreadsheet_url"])
+    sh = open_sheet(gc)
+    if not sh:
+        st.error("Could not save — sheet unavailable.")
+        return
     ws = sh.worksheet("Submissions")
     records = ws.get_all_records()
     row_num = None
@@ -70,7 +90,9 @@ def aggregate(gc):
     latest = get_latest_submissions(gc)
     if latest.empty:
         return pd.DataFrame()
-    sh = gc.open_by_url(st.secrets["gsheets"]["spreadsheet_url"])
+    sh = open_sheet(gc)
+    if not sh:
+        return pd.DataFrame()
     try:
         weights_df = pd.DataFrame(sh.worksheet("Weights").get_all_records())
     except Exception:
@@ -105,15 +127,14 @@ with tab1:
     else:
         person = st.text_input("Your name (used to identify & overwrite your ballot)")
         if person:
-            teams = load_teams(gc)
+            teams = load_teams()
             if "ranking" not in st.session_state:
                 st.session_state.ranking = []
 
-            col1, col2 = st.columns([1, 1])
+            col1, col2 = st.columns(2)
 
             with col1:
                 st.subheader("Available Teams")
-                st.caption("Click Add to move a team into your ranking")
                 for team in teams:
                     if team not in st.session_state.ranking:
                         c1, c2 = st.columns([3, 1])
@@ -124,22 +145,18 @@ with tab1:
                                 st.rerun()
 
             with col2:
-                st.subheader("Your Ranking")
+                st.subheader("Your Ranking (drag to reorder)")
                 if st.session_state.ranking:
-                    # Drag-and-drop reorder
                     ranked = sort_items(st.session_state.ranking, key="rank_sort")
                     st.session_state.ranking = ranked
-
-                    st.markdown("**Current order**")
                     for i, team in enumerate(st.session_state.ranking, 1):
                         st.write(f"**{i}.** {team}")
-
                     if st.button("Submit / Update Ranking", type="primary"):
                         save_submission(gc, person.strip(), st.session_state.ranking)
                         st.success("Ranking saved.")
                         st.session_state.ranking = []
                 else:
-                    st.info("Add teams from the left to build your top 25.")
+                    st.info("Add teams from the left.")
 
 with tab2:
     st.subheader("Weighted Aggregate Top 25")
