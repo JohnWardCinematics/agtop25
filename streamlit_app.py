@@ -68,10 +68,10 @@ st.markdown("""
         color: #ffffff !important;
         font-weight: 700;
         font-size: 0.9rem;
-        margin-top: 6px;
+        margin-top: 8px;
     }
     .rank-numbers div {
-        height: 30px;
+        height: 28px;
         display: flex;
         align-items: center;
         justify-content: flex-end;
@@ -79,6 +79,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Restored green block style that fits 25
 CENTER_STYLE = """
 .sortable-container {
     background: transparent !important;
@@ -99,11 +100,9 @@ CENTER_STYLE = """
     font-size: 0.9rem !important;
     line-height: 1.25 !important;
     min-height: 22px !important;
-    height: 28px !important;
     font-family: 'Bebas Neue', sans-serif !important;
     letter-spacing: 2px !important;
     font-weight: 700 !important;
-    box-sizing: border-box !important;
 }
 .sortable-item:hover { background-color: #66BB6A !important; }
 """
