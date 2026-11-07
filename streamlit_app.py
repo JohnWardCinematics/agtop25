@@ -15,11 +15,11 @@ st.markdown("""
 
     html, body, [class*="css"] {
         font-family: 'Bebas Neue', sans-serif !important;
-        letter-spacing: 1px !important;
+        letter-spacing: 2px !important;
     }
     h1, h2, h3, h4, h5, h6, .stSubheader, .stMarkdown, button, .stButton > button, .stTextInput label, .stTextInput input {
         font-family: 'Bebas Neue', sans-serif !important;
-        letter-spacing: 1.2px !important;
+        letter-spacing: 2px !important;
     }
 
     .block-container { 
@@ -51,7 +51,7 @@ st.markdown("""
         font-size: 0.95rem !important;
         width: 100% !important;
         font-family: 'Bebas Neue', sans-serif !important;
-        letter-spacing: 1px !important;
+        letter-spacing: 2px !important;
     }
     .stButton > button:hover, button[kind="primary"]:hover { background-color: #E6C200 !important; }
 </style>
@@ -79,7 +79,7 @@ CENTER_STYLE = """
     line-height: 1.25 !important;
     min-height: 22px !important;
     font-family: 'Bebas Neue', sans-serif !important;
-    letter-spacing: 1px !important;
+    letter-spacing: 2px !important;
 }
 .sortable-item:hover { background-color: #66BB6A !important; }
 """
