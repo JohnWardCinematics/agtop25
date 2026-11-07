@@ -30,7 +30,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Center column style: compact + matching background
+# Center column style: green blocks + matching background
 CENTER_STYLE = """
 .sortable-container {
     background: transparent !important;
@@ -42,7 +42,7 @@ CENTER_STYLE = """
     overflow-y: hidden !important;
 }
 .sortable-item {
-    background-color: #D4AF37 !important;
+    background-color: #4CAF50 !important;
     color: #1a1a1a !important;
     text-align: left !important;
     padding: 3px 10px !important;
@@ -52,7 +52,7 @@ CENTER_STYLE = """
     line-height: 1.25 !important;
     min-height: 22px !important;
 }
-.sortable-item:hover { background-color: #E6C200 !important; }
+.sortable-item:hover { background-color: #66BB6A !important; }
 """
 
 ET = pytz.timezone("America/New_York")
@@ -197,7 +197,6 @@ with tab1:
             with col_left:
                 st.subheader("Available Teams (click to add)")
                 available = [t for t in teams if t not in st.session_state.ranking]
-                # Fixed-height scrollable container matching center
                 with st.container(height=680):
                     for team in available:
                         if st.button(team, key=f"add_{team}", use_container_width=True):
