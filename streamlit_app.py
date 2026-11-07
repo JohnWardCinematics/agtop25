@@ -64,7 +64,7 @@ st.markdown("""
 
     .rank-numbers {
         text-align: right;
-        padding-right: 2px;          /* almost touching */
+        padding-right: 2px;
         color: #ffffff !important;
         font-weight: 700;
         font-size: 0.9rem;
@@ -78,7 +78,6 @@ st.markdown("""
         padding-bottom: 4px;
     }
 
-    /* Tighten Streamlit column gap */
     [data-testid="column"] {
         padding-left: 0.15rem !important;
         padding-right: 0.15rem !important;
@@ -188,9 +187,10 @@ def save_submission(gc, person, ranking):
                 row_num = i
                 break
         timestamp = datetime.now(ET).strftime("%Y-%m-%d %H:%M:%S")
+        # Timestamp + Person + up to 25 ranks = 27 columns (A–AA)
         row_data = [timestamp, person] + ranking + [""] * (25 - len(ranking))
         if row_num:
-            ws.update(f"A{row_num}:Z{row_num}", [row_data])
+            ws.update(f"A{row_num}:AA{row_num}", [row_data])
         else:
             ws.append_row(row_data)
         st.cache_data.clear()
@@ -273,7 +273,6 @@ with tab1:
                 display_name = person.strip() or "Your"
                 st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
 
-                # Tighter columns
                 num_col, sort_col = st.columns([0.06, 0.94])
 
                 with num_col:
