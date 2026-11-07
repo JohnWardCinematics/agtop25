@@ -9,6 +9,26 @@ from collections import defaultdict
 
 st.set_page_config(page_title="Top 25 Rankings", layout="wide")
 
+# Make the sortable ranking box tall and left-aligned
+st.markdown("""
+<style>
+    /* Target the streamlit-sortables container */
+    div[data-testid="stVerticalBlock"] > div:has(> div.sortable) {
+        min-height: 900px !important;
+    }
+    .sortable-item, .sortable li, [class*="sortable"] {
+        text-align: left !important;
+        justify-content: flex-start !important;
+        padding-left: 12px !important;
+    }
+    /* Extra height insurance */
+    iframe[title="streamlit_sortables.streamlit_sortables"] {
+        min-height: 900px !important;
+        height: 900px !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 ET = pytz.timezone("America/New_York")
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -139,7 +159,6 @@ with tab1:
             with col2:
                 st.subheader("Your Ranking")
                 if st.session_state.ranking:
-                    # Numbered list for display + drag-and-drop
                     numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
 
                     reordered_numbered = sort_items(
@@ -148,7 +167,6 @@ with tab1:
                         key="ranking_sortable"
                     )
 
-                    # Strip the rank numbers back off
                     new_ranking = [item.split(". ", 1)[1] if ". " in item else item
                                    for item in reordered_numbered]
 
