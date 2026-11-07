@@ -238,9 +238,35 @@ def load_results(_gc):
         st.error(f"Could not load results: {e}")
         return pd.DataFrame()
 
+# --- Authentication ---
+def check_login():
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+        st.session_state.username = ""
+
+    if not st.session_state.authenticated:
+        st.title("Associated Goys Top 25 Poll")
+        st.write("Please log in with your voter credentials.")
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        if st.button("Log In"):
+            voters = st.secrets.get("voters", {})
+            if username in voters and voters[username] == password:
+                st.session_state.authenticated = True
+                st.session_state.username = username
+                st.rerun()
+            else:
+                st.error("Invalid username or password.")
+        return False
+    return True
+
 # --- UI ---
+if not check_login():
+    st.stop()
+
 date_range = format_date_range()
 st.title(f"Associated Goys Top 25 Poll | {date_range}")
+st.caption(f"Logged in as: {st.session_state.username}")
 
 gc = get_gsheet_client()
 teams = load_teams()
@@ -251,57 +277,58 @@ with tab1:
     if not is_open():
         st.error("Submissions are closed until next week (cutoff is Sunday 11:59 PM ET).")
     else:
-        person = st.text_input("Your name (used to identify & overwrite your ballot)")
-        if person:
-            if "ranking" not in st.session_state:
-                st.session_state.ranking = []
+        # Use the logged-in username as the voter name
+        person = st.session_state.username
+        st.info(f"Voting as: **{person}**")
 
-            col_left, col_center, col_right = st.columns([1, 2, 1])
+        if "ranking" not in st.session_state:
+            st.session_state.ranking = []
 
-            with col_left:
-                st.subheader("Available Teams (click to add)")
-                available = [t for t in teams if t not in st.session_state.ranking]
-                with st.container(height=700):
-                    for team in available:
-                        if st.button(team, key=f"add_{team}", use_container_width=True):
-                            if len(st.session_state.ranking) < 25:
-                                st.session_state.ranking.append(team)
-                                st.rerun()
+        col_left, col_center, col_right = st.columns([1, 2, 1])
 
-            with col_center:
-                display_name = person.strip() or "Your"
-                st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
-
-                num_col, sort_col = st.columns([0.06, 0.94])
-
-                with num_col:
-                    numbers_html = '<div class="rank-numbers">'
-                    for i in range(1, 26):
-                        numbers_html += f'<div>{i}.</div>'
-                    numbers_html += '</div>'
-                    st.markdown(numbers_html, unsafe_allow_html=True)
-
-                with sort_col:
-                    center_result = sort_items(
-                        st.session_state.ranking,
-                        direction="vertical",
-                        key=f"ranking_{len(st.session_state.ranking)}",
-                        custom_style=CENTER_STYLE
-                    )
-                    if center_result != st.session_state.ranking:
-                        st.session_state.ranking = center_result
-                        st.rerun()
-
-            with col_right:
-                st.subheader("Submit")
-                if st.session_state.ranking:
-                    if st.button("Submit / Update Ranking", type="primary", use_container_width=True):
-                        if save_submission(gc, person.strip(), st.session_state.ranking):
-                            st.success("Ranking saved.")
-                            st.session_state.ranking = []
+        with col_left:
+            st.subheader("Available Teams (click to add)")
+            available = [t for t in teams if t not in st.session_state.ranking]
+            with st.container(height=700):
+                for team in available:
+                    if st.button(team, key=f"add_{team}", use_container_width=True):
+                        if len(st.session_state.ranking) < 25:
+                            st.session_state.ranking.append(team)
                             st.rerun()
-                else:
-                    st.button("Submit / Update Ranking", disabled=True, use_container_width=True)
+
+        with col_center:
+            st.markdown(f'<h3 class="center-header">{person} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
+
+            num_col, sort_col = st.columns([0.06, 0.94])
+
+            with num_col:
+                numbers_html = '<div class="rank-numbers">'
+                for i in range(1, 26):
+                    numbers_html += f'<div>{i}.</div>'
+                numbers_html += '</div>'
+                st.markdown(numbers_html, unsafe_allow_html=True)
+
+            with sort_col:
+                center_result = sort_items(
+                    st.session_state.ranking,
+                    direction="vertical",
+                    key=f"ranking_{len(st.session_state.ranking)}",
+                    custom_style=CENTER_STYLE
+                )
+                if center_result != st.session_state.ranking:
+                    st.session_state.ranking = center_result
+                    st.rerun()
+
+        with col_right:
+            st.subheader("Submit")
+            if st.session_state.ranking:
+                if st.button("Submit / Update Ranking", type="primary", use_container_width=True):
+                    if save_submission(gc, person, st.session_state.ranking):
+                        st.success("Ranking saved.")
+                        st.session_state.ranking = []
+                        st.rerun()
+            else:
+                st.button("Submit / Update Ranking", disabled=True, use_container_width=True)
 
 with tab2:
     st.subheader("Weighted Aggregate Top 25")
