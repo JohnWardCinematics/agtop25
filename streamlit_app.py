@@ -29,10 +29,16 @@ def is_open():
         return False
     return True
 
-def load_teams(gc):
-    sh = gc.open_by_url(st.secrets["gsheets"]["spreadsheet_url"])
-    ws = sh.worksheet("Teams")
-    return [r[0] for r in ws.get_all_values()[1:] if r and r[0].strip()]
+@st.cache_data(ttl=60)
+def load_teams(_gc):
+    try:
+        sh = _gc.open_by_url(st.secrets["gsheets"]["spreadsheet_url"])
+        ws = sh.worksheet("Teams")
+        values = ws.get_all_values()
+        return [r[0].strip() for r in values[1:] if r and r[0].strip()]
+    except Exception as e:
+        st.error(f"Could not load teams: {e}")
+        return []
 
 def get_latest_submissions(gc):
     sh = gc.open_by_url(st.secrets["gsheets"]["spreadsheet_url"])
@@ -100,37 +106,45 @@ with tab1:
         person = st.text_input("Your name (used to identify & overwrite your ballot)")
         if person:
             teams = load_teams(gc)
+            if "ranking" not in st.session_state:
+                st.session_state.ranking = []
 
-            # Two-column drag-and-drop
-            containers = [
-                {"header": "Available Teams", "items": teams},
-                {"header": "Your Ranking (drag here — top = #1)", "items": []}
-            ]
+            col1, col2 = st.columns([1, 1])
 
-            result = sort_items(containers, multi_containers=True, key="ranking_dnd")
-            ranked = result[1]["items"][:25]
+            with col1:
+                st.subheader("Available Teams")
+                st.caption("Click Add to move a team into your ranking")
+                for team in teams:
+                    if team not in st.session_state.ranking:
+                        c1, c2 = st.columns([3, 1])
+                        c1.write(team)
+                        if c2.button("Add", key=f"add_{team}"):
+                            if len(st.session_state.ranking) < 25:
+                                st.session_state.ranking.append(team)
+                                st.rerun()
 
-            # Live numbered preview
-            st.subheader("Live Ranking Preview")
-            if ranked:
-                cols = st.columns([1, 4])
-                for i, team in enumerate(ranked, 1):
-                    cols[0].markdown(f"**{i}.**")
-                    cols[1].write(team)
-                if len(ranked) < 25:
-                    st.caption(f"{25 - len(ranked)} slots remaining")
-            else:
-                st.info("Drag teams from the left column into the right column. Reorder them as needed.")
+            with col2:
+                st.subheader("Your Ranking")
+                if st.session_state.ranking:
+                    # Drag-and-drop reorder
+                    ranked = sort_items(st.session_state.ranking, key="rank_sort")
+                    st.session_state.ranking = ranked
 
-            if ranked and st.button("Submit / Update Ranking", type="primary"):
-                save_submission(gc, person.strip(), ranked)
-                st.success("Ranking saved (previous submission overwritten if it existed).")
+                    st.markdown("**Current order**")
+                    for i, team in enumerate(st.session_state.ranking, 1):
+                        st.write(f"**{i}.** {team}")
+
+                    if st.button("Submit / Update Ranking", type="primary"):
+                        save_submission(gc, person.strip(), st.session_state.ranking)
+                        st.success("Ranking saved.")
+                        st.session_state.ranking = []
+                else:
+                    st.info("Add teams from the left to build your top 25.")
 
 with tab2:
     st.subheader("Weighted Aggregate Top 25")
     results = aggregate(gc)
     if not results.empty:
         st.dataframe(results.head(25), use_container_width=True)
-        st.caption("Weights are applied from the Weights tab. Edit weights there anytime.")
     else:
         st.info("No submissions yet.")
