@@ -9,13 +9,30 @@ from collections import defaultdict
 
 st.set_page_config(page_title="Associated Goys Top 25 Poll", layout="wide")
 
-# Tabs + buttons styling
+# Compact styling to fit 1920x1080 without scrolling
 st.markdown("""
 <style>
-    button[data-baseweb="tab"] {
+    /* Reduce overall padding */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 0.5rem !important;
+        max-width: 100% !important;
+    }
+    h1 {
+        font-size: 1.8rem !important;
+        margin-bottom: 0.4rem !important;
+    }
+    h2, h3 {
         font-size: 1.15rem !important;
+        margin-top: 0.3rem !important;
+        margin-bottom: 0.3rem !important;
+    }
+
+    /* Tabs */
+    button[data-baseweb="tab"] {
+        font-size: 1.05rem !important;
         font-weight: 600 !important;
-        padding: 0.6rem 1.2rem !important;
+        padding: 0.4rem 1rem !important;
     }
     button[data-baseweb="tab"][aria-selected="true"],
     button[data-baseweb="tab"]:hover {
@@ -23,35 +40,51 @@ st.markdown("""
         color: #1a1a1a !important;
         border-bottom: 3px solid #D4AF37 !important;
     }
+
+    /* Buttons */
     .stButton > button,
     button[kind="primary"] {
         background-color: #D4AF37 !important;
         color: #1a1a1a !important;
         border: none !important;
+        padding: 0.35rem 0.6rem !important;
+        font-size: 0.9rem !important;
     }
     .stButton > button:hover,
     button[kind="primary"]:hover {
         background-color: #E6C200 !important;
     }
+
+    /* Tighter available teams list */
+    .stMarkdown p {
+        margin-bottom: 0.15rem !important;
+        font-size: 0.92rem !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# CSS for the sortable blocks
+# Compact sortable style
 SORTABLE_STYLE = """
 .sortable-item {
     background-color: #D4AF37 !important;
     color: #1a1a1a !important;
     text-align: left !important;
     justify-content: flex-start !important;
-    padding: 10px 16px !important;
-    margin: 4px 0 !important;
-    border-radius: 6px !important;
+    padding: 6px 12px !important;
+    margin: 2px 0 !important;
+    border-radius: 4px !important;
     font-weight: 500;
+    font-size: 0.92rem !important;
     display: block !important;
     width: 100% !important;
+    line-height: 1.3 !important;
 }
 .sortable-item:hover {
     background-color: #E6C200 !important;
+}
+.sortable-component {
+    max-height: 680px !important;
+    overflow-y: auto !important;
 }
 """
 
@@ -192,15 +225,14 @@ with tab1:
             if "ranking" not in st.session_state:
                 st.session_state.ranking = []
 
-            # Three columns: 1/4 | 1/2 | 1/4
             col_left, col_center, col_right = st.columns([1, 2, 1])
 
             with col_left:
                 st.subheader("Available Teams")
                 available = [t for t in teams if t not in st.session_state.ranking]
                 for team in available:
-                    c1, c2 = st.columns([3, 1])
-                    c1.write(team)
+                    c1, c2 = st.columns([3.2, 1])
+                    c1.markdown(f"<span style='font-size:0.9rem'>{team}</span>", unsafe_allow_html=True)
                     if c2.button("Add", key=f"add_{team}"):
                         if len(st.session_state.ranking) < 25:
                             st.session_state.ranking.append(team)
