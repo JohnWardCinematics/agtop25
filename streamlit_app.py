@@ -58,7 +58,7 @@ st.markdown("""
 
     .center-header {
         font-size: 1.45rem !important;
-        margin: 0.2rem 0 0.4rem 0 !important;
+        margin: 0.2rem 0 0.2rem 0 !important;
         text-align: center !important;
     }
 
@@ -68,7 +68,7 @@ st.markdown("""
         color: #ffffff !important;
         font-weight: 700;
         font-size: 0.9rem;
-        margin-top: 10px;
+        margin-top: 4px;
     }
     .rank-numbers div {
         height: 28px;
@@ -83,12 +83,15 @@ st.markdown("""
 CENTER_STYLE = """
 .sortable-container {
     background: transparent !important;
+    margin-top: -8px !important;   /* pulls the whole green list up */
 }
 .sortable-container-body {
     background: transparent !important;
     max-height: 700px !important;
     min-height: 700px !important;
     overflow-y: hidden !important;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
 }
 .sortable-item {
     background-color: #4CAF50 !important;
