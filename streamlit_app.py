@@ -9,23 +9,24 @@ from collections import defaultdict
 
 st.set_page_config(page_title="Top 25 Rankings", layout="wide")
 
-# Styling: tall left-aligned sortable list + golden yellow accents
+# Styling: yellow accents for tabs, buttons, and sortable items
 st.markdown("""
 <style>
-    /* Sortable list height and left alignment */
-    div[data-testid="column"] .sortable,
-    .sortable-container,
-    [class*="sortable"] {
-        min-height: 800px !important;
-        text-align: left !important;
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] button {
+        color: #1a1a1a !important;
     }
-    .sortable-item {
-        text-align: left !important;
-        justify-content: flex-start !important;
-        padding: 8px 12px !important;
+    .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
+        background-color: #D4AF37 !important;
+        color: #1a1a1a !important;
+        border-bottom: 2px solid #D4AF37 !important;
+    }
+    .stTabs [data-baseweb="tab-list"] button:hover {
+        background-color: #E6C200 !important;
+        color: #1a1a1a !important;
     }
 
-    /* Golden yellow for buttons and interactive elements */
+    /* Buttons */
     .stButton > button {
         background-color: #D4AF37 !important;
         color: #1a1a1a !important;
@@ -35,19 +36,29 @@ st.markdown("""
         background-color: #E6C200 !important;
         color: #1a1a1a !important;
     }
-    .stButton > button:active,
-    .stButton > button:focus {
-        background-color: #C5A028 !important;
-        color: #1a1a1a !important;
-    }
-
-    /* Primary button (Submit) */
     button[kind="primary"] {
         background-color: #D4AF37 !important;
         color: #1a1a1a !important;
     }
     button[kind="primary"]:hover {
         background-color: #E6C200 !important;
+    }
+
+    /* Sortable items */
+    .sortable-item {
+        background-color: #D4AF37 !important;
+        color: #1a1a1a !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
+        padding: 8px 12px !important;
+        border-radius: 4px;
+        margin-bottom: 4px;
+    }
+    div[data-testid="column"] .sortable,
+    .sortable-container,
+    [class*="sortable"] {
+        min-height: 800px !important;
+        text-align: left !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -155,7 +166,7 @@ st.title("Top 25 Rankings")
 gc = get_gsheet_client()
 teams = load_teams()
 
-tab1, tab2 = st.tabs(["Submit Ranking", "Current Results"])
+tab1, tab2 = st.tabs(["Submit Rankings", "Current Results"])
 
 with tab1:
     if not is_open():
@@ -182,7 +193,7 @@ with tab1:
             with col2:
                 st.subheader("Your Ranking (drag to reorder)")
                 if st.session_state.ranking:
-                    # Numbered items for the sortable list
+                    # Numbered items for drag-and-drop
                     numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
 
                     reordered_numbered = sort_items(
@@ -191,7 +202,6 @@ with tab1:
                         key=f"rank_sort_{len(st.session_state.ranking)}"
                     )
 
-                    # Strip numbers to get clean team names
                     new_ranking = [item.split(". ", 1)[1] if ". " in item else item
                                    for item in reordered_numbered]
 
@@ -199,7 +209,14 @@ with tab1:
                         st.session_state.ranking = new_ranking
                         st.rerun()
 
-                    st.caption("Drag teams up or down to reorder.")
+                    # Remove buttons under the sortable list
+                    st.caption("Drag to reorder. Use Remove to undo an add.")
+                    for i, team in enumerate(st.session_state.ranking):
+                        c_name, c_remove = st.columns([5, 1])
+                        c_name.write(f"{i+1}. {team}")
+                        if c_remove.button("Remove", key=f"remove_{i}"):
+                            st.session_state.ranking.pop(i)
+                            st.rerun()
 
                     if st.button("Submit / Update Ranking", type="primary"):
                         if save_submission(gc, person.strip(), st.session_state.ranking):
