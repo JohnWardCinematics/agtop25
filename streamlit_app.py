@@ -246,6 +246,7 @@ with tab1:
                 
                 numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
                 
+                # More stable key reduces full remounts
                 center_result = sort_items(
                     numbered,
                     direction="vertical",
@@ -255,21 +256,10 @@ with tab1:
                 
                 new_ranking = [item.split(". ", 1)[1] if ". " in item else item for item in center_result]
                 
+                # Only update + rerun if the order actually changed
                 if new_ranking != st.session_state.ranking and len(new_ranking) == len(st.session_state.ranking):
                     st.session_state.ranking = new_ranking
                     st.rerun()
-
-                # Clean remove control (doesn't break the sortable)
-                if st.session_state.ranking:
-                    to_remove = st.selectbox(
-                        "Remove a team (returns it to Available Teams)",
-                        options=[""] + st.session_state.ranking,
-                        index=0,
-                        key="remove_select"
-                    )
-                    if to_remove and st.button("Remove Selected Team", key="do_remove"):
-                        st.session_state.ranking.remove(to_remove)
-                        st.rerun()
 
             with col_right:
                 st.subheader("Submit")
@@ -279,12 +269,8 @@ with tab1:
                             st.success("Ranking saved.")
                             st.session_state.ranking = []
                             st.rerun()
-                    if st.button("START OVER", use_container_width=True):
-                        st.session_state.ranking = []
-                        st.rerun()
                 else:
                     st.button("Submit / Update Ranking", disabled=True, use_container_width=True)
-                    st.button("START OVER", disabled=True, use_container_width=True)
 
 with tab2:
     st.subheader("Weighted Aggregate Top 25")
