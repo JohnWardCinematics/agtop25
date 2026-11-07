@@ -64,7 +64,7 @@ st.markdown("""
 
     .rank-numbers {
         text-align: right;
-        padding-right: 8px;
+        padding-right: 2px;          /* almost touching */
         color: #ffffff !important;
         font-weight: 700;
         font-size: 0.9rem;
@@ -77,13 +77,19 @@ st.markdown("""
         justify-content: flex-end;
         padding-bottom: 4px;
     }
+
+    /* Tighten Streamlit column gap */
+    [data-testid="column"] {
+        padding-left: 0.15rem !important;
+        padding-right: 0.15rem !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 CENTER_STYLE = """
 .sortable-container {
     background: transparent !important;
-    margin-top: -8px !important;   /* pulls the whole green list up */
+    margin-top: -8px !important;
 }
 .sortable-container-body {
     background: transparent !important;
@@ -267,7 +273,8 @@ with tab1:
                 display_name = person.strip() or "Your"
                 st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
 
-                num_col, sort_col = st.columns([0.08, 0.92])
+                # Tighter columns
+                num_col, sort_col = st.columns([0.06, 0.94])
 
                 with num_col:
                     numbers_html = '<div class="rank-numbers">'
