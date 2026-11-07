@@ -37,8 +37,8 @@ CENTER_STYLE = """
 }
 .sortable-container-body {
     background: transparent !important;
-    max-height: 720px !important;
-    min-height: 720px !important;
+    max-height: 680px !important;
+    min-height: 680px !important;
     overflow-y: hidden !important;
 }
 .sortable-item {
@@ -197,8 +197,8 @@ with tab1:
             with col_left:
                 st.subheader("Available Teams (click to add)")
                 available = [t for t in teams if t not in st.session_state.ranking]
-                # Fixed-height scrollable container (matches center height)
-                with st.container(height=720):
+                # Fixed-height scrollable container matching center
+                with st.container(height=680):
                     for team in available:
                         if st.button(team, key=f"add_{team}", use_container_width=True):
                             if len(st.session_state.ranking) < 25:
