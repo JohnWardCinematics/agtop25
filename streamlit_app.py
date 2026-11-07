@@ -187,7 +187,6 @@ def save_submission(gc, person, ranking):
                 row_num = i
                 break
         timestamp = datetime.now(ET).strftime("%Y-%m-%d %H:%M:%S")
-        # Timestamp + Person + up to 25 ranks = 27 columns (A–AA)
         row_data = [timestamp, person] + ranking + [""] * (25 - len(ranking))
         if row_num:
             ws.update(f"A{row_num}:AA{row_num}", [row_data])
@@ -260,14 +259,20 @@ with tab1:
             col_left, col_center, col_right = st.columns([1, 2, 1])
 
             with col_left:
-                st.subheader("Available Teams (click to add)")
+                st.subheader("Available Teams")
                 available = [t for t in teams if t not in st.session_state.ranking]
-                with st.container(height=700):
-                    for team in available:
-                        if st.button(team, key=f"add_{team}", use_container_width=True):
-                            if len(st.session_state.ranking) < 25:
-                                st.session_state.ranking.append(team)
-                                st.rerun()
+                
+                selected = st.multiselect(
+                    "Select teams to add",
+                    options=available,
+                    key="team_select"
+                )
+                
+                if st.button("Add Selected to Ranking", type="primary", use_container_width=True):
+                    slots_left = 25 - len(st.session_state.ranking)
+                    to_add = selected[:slots_left]
+                    st.session_state.ranking.extend(to_add)
+                    st.rerun()
 
             with col_center:
                 display_name = person.strip() or "Your"
