@@ -49,11 +49,19 @@ st.markdown("""
         margin: 2px 0 !important;
         border-radius: 5px !important;
         font-size: 0.95rem !important;
+        font-weight: 700 !important;
         width: 100% !important;
         font-family: 'Bebas Neue', sans-serif !important;
         letter-spacing: 2px !important;
     }
     .stButton > button:hover, button[kind="primary"]:hover { background-color: #E6C200 !important; }
+
+    /* Larger center column header */
+    .center-header {
+        font-size: 1.45rem !important;
+        margin: 0.2rem 0 0.4rem 0 !important;
+        text-align: center !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -80,6 +88,7 @@ CENTER_STYLE = """
     min-height: 22px !important;
     font-family: 'Bebas Neue', sans-serif !important;
     letter-spacing: 2px !important;
+    font-weight: 700 !important;
 }
 .sortable-item:hover { background-color: #66BB6A !important; }
 """
@@ -235,7 +244,7 @@ with tab1:
 
             with col_center:
                 display_name = person.strip() or "Your"
-                st.subheader(f"{display_name} Rankings (drag to reorder)")
+                st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
                 numbered = [f"{i+1}. {team}" for i, team in enumerate(st.session_state.ranking)]
                 center_result = sort_items(
                     numbered,
