@@ -259,15 +259,17 @@ with tab1:
                     st.session_state.ranking = new_ranking
                     st.rerun()
 
-                # Remove buttons for each ranked team
+                # Clean remove control (doesn't break the sortable)
                 if st.session_state.ranking:
-                    st.caption("Remove individual teams:")
-                    remove_cols = st.columns(5)
-                    for i, team in enumerate(st.session_state.ranking):
-                        with remove_cols[i % 5]:
-                            if st.button(f"✕ {i+1}", key=f"rm_{i}", help=f"Remove {team}"):
-                                st.session_state.ranking.pop(i)
-                                st.rerun()
+                    to_remove = st.selectbox(
+                        "Remove a team (returns it to Available Teams)",
+                        options=[""] + st.session_state.ranking,
+                        index=0,
+                        key="remove_select"
+                    )
+                    if to_remove and st.button("Remove Selected Team", key="do_remove"):
+                        st.session_state.ranking.remove(to_remove)
+                        st.rerun()
 
             with col_right:
                 st.subheader("Submit")
