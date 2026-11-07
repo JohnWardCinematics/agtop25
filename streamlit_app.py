@@ -64,15 +64,15 @@ st.markdown("""
 
     .rank-numbers {
         text-align: right;
-        padding-right: 6px;
+        padding-right: 4px;
         color: #ffffff !important;
         font-weight: 700;
-        font-size: 0.9rem;
+        font-size: 0.88rem;
         line-height: 1;
-        margin-top: 4px;
+        margin-top: 2px;
     }
     .rank-numbers div {
-        height: 28px;
+        height: 26px;
         display: flex;
         align-items: center;
         justify-content: flex-end;
@@ -265,7 +265,7 @@ with tab1:
                 with num_col:
                     numbers_html = '<div class="rank-numbers">'
                     for i in range(1, 26):
-                        numbers_html += f'<div>{i}</div>'
+                        numbers_html += f'<div>{i}.</div>'
                     numbers_html += '</div>'
                     st.markdown(numbers_html, unsafe_allow_html=True)
 
