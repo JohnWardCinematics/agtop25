@@ -133,10 +133,13 @@ st.markdown("""
         padding: 4px 6px;
         border-bottom: 1px solid #444;
         font-weight: 700;
+        font-size: 1.15rem !important;  /* ~4 sizes bigger than 0.78rem */
+        white-space: nowrap;
     }
     .results-table td {
         padding: 2px 6px;
         border-bottom: 1px solid #333;
+        font-size: 0.78rem;
     }
     .results-table th.rank, .results-table td.rank {
         width: 40px;
@@ -148,9 +151,10 @@ st.markdown("""
         text-align: left !important;
     }
     .results-table th.num, .results-table td.num {
-        width: 80px;
-        max-width: 80px;
+        width: 110px;
+        max-width: 110px;
         text-align: center !important;
+        white-space: nowrap;
     }
     .results-table-container {
         height: 680px;
