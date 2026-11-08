@@ -130,7 +130,7 @@ st.markdown("""
     }
     .results-table th {
         text-align: center !important;
-        padding: 4px 6px;
+        padding: 6px 12px;
         border-bottom: 1px solid #444;
         font-weight: 700;
         font-size: 1.15rem !important;
@@ -142,8 +142,8 @@ st.markdown("""
         font-size: 0.78rem;
     }
     .results-table th.rank, .results-table td.rank {
-        width: 130px;
-        max-width: 130px;
+        width: 160px;
+        max-width: 160px;
         text-align: center !important;
     }
     .results-table th.team, .results-table td.team {
@@ -151,8 +151,8 @@ st.markdown("""
         text-align: left !important;
     }
     .results-table th.num, .results-table td.num {
-        width: 130px;
-        max-width: 130px;
+        width: 160px;
+        max-width: 160px;
         text-align: center !important;
         white-space: nowrap;
     }
