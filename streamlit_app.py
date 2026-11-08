@@ -344,7 +344,7 @@ date_range = format_date_range()
 # Main header with logged-in status on the left
 header_left, header_center = st.columns([1, 4])
 with header_left:
-    st.markdown(f"<div style='text-align: left; margin-top: 0.6rem; font-size: 0.95rem;'>Logged in as: {display_name}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align: left; margin-top: 1.1rem; font-size: 0.95rem; color: #aaaaaa;'>Logged in as: {display_name}</div>", unsafe_allow_html=True)
 with header_center:
     st.title(f"Associated Goys Top 25 Poll | Week {week_number} | {date_range}")
 
@@ -370,6 +370,9 @@ with tab1:
         if "show_remove" not in st.session_state:
             st.session_state.show_remove = False
 
+        if "confirm_clear" not in st.session_state:
+            st.session_state.confirm_clear = False
+
         col_left, col_center, col_right = st.columns([1, 2, 1])
 
         with col_left:
@@ -383,31 +386,7 @@ with tab1:
                             st.rerun()
 
         with col_center:
-            h_left, h_center, h_right = st.columns([1, 2, 1])
-            with h_left:
-                if st.button("CLEAR ALL", use_container_width=True, key="clear_all"):
-                    st.session_state.ranking = []
-                    st.session_state.show_remove = False
-                    st.rerun()
-            with h_center:
-                st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
-            with h_right:
-                if st.button("REMOVE", use_container_width=True, key="toggle_remove"):
-                    st.session_state.show_remove = not st.session_state.show_remove
-                    st.rerun()
-                
-                if st.session_state.show_remove and st.session_state.ranking:
-                    to_remove = st.selectbox(
-                        "Select team to remove",
-                        options=[""] + st.session_state.ranking,
-                        index=0,
-                        key="remove_select",
-                        label_visibility="collapsed"
-                    )
-                    if to_remove and st.button("Confirm Remove", key="confirm_remove", use_container_width=True):
-                        st.session_state.ranking.remove(to_remove)
-                        st.session_state.show_remove = False
-                        st.rerun()
+            st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
 
             num_col, sort_col = st.columns([0.06, 0.94])
 
@@ -431,14 +410,53 @@ with tab1:
 
         with col_right:
             st.markdown('<div class="side-header">Submit</div>', unsafe_allow_html=True)
+            
+            # CLEAR ALL with confirmation
+            if not st.session_state.confirm_clear:
+                if st.button("CLEAR ALL", use_container_width=True, key="clear_all"):
+                    st.session_state.confirm_clear = True
+                    st.rerun()
+            else:
+                st.warning("Clear all rankings?")
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button("Yes", key="yes_clear", use_container_width=True):
+                        st.session_state.ranking = []
+                        st.session_state.confirm_clear = False
+                        st.session_state.show_remove = False
+                        st.rerun()
+                with c2:
+                    if st.button("No", key="no_clear", use_container_width=True):
+                        st.session_state.confirm_clear = False
+                        st.rerun()
+
+            # REMOVE
+            if st.button("REMOVE", use_container_width=True, key="toggle_remove"):
+                st.session_state.show_remove = not st.session_state.show_remove
+                st.rerun()
+            
+            if st.session_state.show_remove and st.session_state.ranking:
+                to_remove = st.selectbox(
+                    "Select team to remove",
+                    options=[""] + st.session_state.ranking,
+                    index=0,
+                    key="remove_select",
+                    label_visibility="collapsed"
+                )
+                if to_remove and st.button("Confirm Remove", key="confirm_remove", use_container_width=True):
+                    st.session_state.ranking.remove(to_remove)
+                    st.session_state.show_remove = False
+                    st.rerun()
+
+            st.write("")  # spacer
             if st.session_state.ranking:
-                if st.button("Submit / Update Ranking", type="primary", use_container_width=True, key="submit_btn"):
+                if st.button("SUBMIT/UPDATE RANKINGS", type="primary", use_container_width=True, key="submit_btn"):
                     if save_submission(gc, display_name, st.session_state.ranking):
                         st.session_state.ranking = []
                         st.session_state.just_submitted = True
                         st.rerun()
             else:
-                st.button("Submit / Update Ranking", disabled=True, use_container_width=True, key="submit_btn_disabled")
+                st.button("SUBMIT/UPDATE RANKINGS", disabled=True, use_container_width=True, key="submit_btn_disabled")
             
             if st.session_state.get("just_submitted"):
                 st.success(f"Rankings Submitted - You may continue to submit rankings until the end of the Week {week_number} window and they will overwrite previous submissions.")
