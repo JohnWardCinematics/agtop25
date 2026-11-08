@@ -37,7 +37,6 @@ st.markdown("""
         margin: 0.3rem 0 !important; 
         text-align: center !important; 
     }
-    /* Remove anchor/link icons from headers */
     h1 a, h2 a, h3 a, h4 a, h5 a, h6 a,
     .stSubheader a, [data-testid="stHeader"] a {
         display: none !important;
@@ -87,6 +86,14 @@ st.markdown("""
     [data-testid="column"] {
         padding-left: 0.15rem !important;
         padding-right: 0.15rem !important;
+    }
+
+    .results-table {
+        font-size: 0.85rem;
+        line-height: 1.2;
+    }
+    .results-table td, .results-table th {
+        padding: 2px 6px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -376,12 +383,38 @@ with tab1:
                 st.session_state.just_submitted = False
 
 with tab2:
-    st.subheader("Weighted Aggregate Top 25")
+    st.markdown("**Weighted Aggregate Results**")
     if st.button("Refresh Results"):
         st.cache_data.clear()
+    
     results = load_results(gc)
     if not results.empty:
-        st.dataframe(results.head(25), use_container_width=True)
-        st.caption("Weights come from the Weights tab. Edit them anytime.")
+        top25 = results.head(25).copy()
+        others = results.iloc[25:].copy()
+        
+        col_res_left, col_res_right = st.columns([1.2, 1])
+        
+        with col_res_left:
+            st.markdown("**Top 25**")
+            top25.insert(0, "Rank", range(1, len(top25) + 1))
+            st.dataframe(
+                top25[["Rank", "Team", "Points", "First Place Votes"]],
+                use_container_width=True,
+                height=680,
+                hide_index=True
+            )
+        
+        with col_res_right:
+            st.markdown("**Others Receiving Votes**")
+            if not others.empty:
+                others.insert(0, "Rank", range(26, 26 + len(others)))
+                st.dataframe(
+                    others[["Rank", "Team", "Points", "First Place Votes"]],
+                    use_container_width=True,
+                    height=680,
+                    hide_index=True
+                )
+            else:
+                st.info("No other teams received votes.")
     else:
         st.info("No submissions yet (or sheet temporarily unavailable).")
