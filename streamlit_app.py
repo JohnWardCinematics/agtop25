@@ -88,12 +88,9 @@ st.markdown("""
         padding-right: 0.15rem !important;
     }
 
-    .results-table {
-        font-size: 0.85rem;
-        line-height: 1.2;
-    }
-    .results-table td, .results-table th {
-        padding: 2px 6px !important;
+    /* Compact results table */
+    div[data-testid="stDataFrame"] {
+        font-size: 0.82rem !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -383,9 +380,12 @@ with tab1:
                 st.session_state.just_submitted = False
 
 with tab2:
-    st.markdown("**Weighted Aggregate Results**")
-    if st.button("Refresh Results"):
-        st.cache_data.clear()
+    header_col, refresh_col = st.columns([3, 1])
+    with header_col:
+        st.markdown("**Weighted Aggregate Results**")
+    with refresh_col:
+        if st.button("Refresh Results", use_container_width=True):
+            st.cache_data.clear()
     
     results = load_results(gc)
     if not results.empty:
@@ -397,10 +397,10 @@ with tab2:
         with col_res_left:
             st.markdown("**Top 25**")
             top25.insert(0, "Rank", range(1, len(top25) + 1))
+            # No height limit so all 25 show without scroll
             st.dataframe(
                 top25[["Rank", "Team", "Points", "First Place Votes"]],
                 use_container_width=True,
-                height=680,
                 hide_index=True
             )
         
