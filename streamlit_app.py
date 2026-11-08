@@ -96,6 +96,16 @@ st.markdown("""
         padding: 1px 4px !important;
         line-height: 1.15 !important;
     }
+
+    .remove-zone {
+        border: 2px dashed #D4AF37;
+        border-radius: 6px;
+        padding: 6px;
+        text-align: center;
+        color: #D4AF37;
+        font-size: 0.85rem;
+        margin-top: 4px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -368,40 +378,28 @@ with tab1:
                             st.rerun()
 
         with col_center:
-            header_left, header_right = st.columns([3, 1])
-            with header_left:
+            # Header row: CLEAR ALL | centered title | DRAG HERE TO REMOVE
+            h_left, h_center, h_right = st.columns([1, 2, 1])
+            with h_left:
+                if st.button("CLEAR ALL", use_container_width=True, key="clear_all"):
+                    st.session_state.ranking = []
+                    st.rerun()
+            with h_center:
                 st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
-            with header_right:
-                prev_week = max(1, week_number - 1)
-                option = st.selectbox(
-                    "OPTIONS",
-                    options=["OPTIONS", f"LOAD WEEK {prev_week} RANKINGS", "REMOVE TEAM", "RESET AND START OVER"],
-                    index=0,
-                    key="options_select",
-                    label_visibility="collapsed"
-                )
-                
-                if option == f"LOAD WEEK {prev_week} RANKINGS":
-                    if st.button("Load", key="load_prev", use_container_width=True):
-                        previous = load_previous_ranking(gc, display_name)
-                        st.session_state.ranking = previous if previous else []
-                        st.rerun()
-                
-                elif option == "REMOVE TEAM" and st.session_state.ranking:
+            with h_right:
+                st.markdown('<div class="remove-zone">DRAG HERE TO REMOVE</div>', unsafe_allow_html=True)
+                # Note: true external drag-to-remove is limited in streamlit-sortables.
+                # This zone is visual. For reliable removal use the select below if needed.
+                if st.session_state.ranking:
                     to_remove = st.selectbox(
-                        "Select team",
+                        "or select to remove",
                         options=[""] + st.session_state.ranking,
                         index=0,
-                        key="remove_select",
+                        key="quick_remove",
                         label_visibility="collapsed"
                     )
-                    if to_remove and st.button("Remove", key="do_remove", use_container_width=True):
+                    if to_remove and st.button("Remove Selected", key="remove_selected", use_container_width=True):
                         st.session_state.ranking.remove(to_remove)
-                        st.rerun()
-                
-                elif option == "RESET AND START OVER":
-                    if st.button("Reset", key="do_reset", use_container_width=True):
-                        st.session_state.ranking = []
                         st.rerun()
 
             num_col, sort_col = st.columns([0.06, 0.94])
