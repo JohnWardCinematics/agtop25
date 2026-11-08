@@ -46,7 +46,6 @@ st.markdown("""
     button[data-baseweb="tab"][aria-selected="true"],
     button[data-baseweb="tab"]:hover { background-color: #D4AF37 !important; color: #1a1a1a !important; }
 
-    /* Default buttons stay yellow */
     .stButton > button {
         background-color: #D4AF37 !important; 
         color: #1a1a1a !important; 
@@ -63,7 +62,6 @@ st.markdown("""
     }
     .stButton > button:hover { background-color: #E6C200 !important; }
 
-    /* ENABLED submit: green + bright outline + white text */
     div[data-testid="stButton"] > button[kind="primary"] {
         background-color: #4CAF50 !important;
         color: #ffffff !important;
@@ -75,7 +73,6 @@ st.markdown("""
         border: 3px solid #00FF00 !important;
     }
 
-    /* DISABLED submit: red + white text */
     div[data-testid="stButton"] > button:disabled {
         background-color: #d32f2f !important;
         color: #ffffff !important;
@@ -272,7 +269,37 @@ def save_submission(gc, person, ranking):
         st.error(f"Save failed: {e}")
         return False
 
-def load_previous_ranking(gc, person):
+def load_manual_baseline(gc):
+    """Load the manual Week 5 baseline from the Baseline_Week5 tab."""
+    sh = open_sheet(gc)
+    if not sh:
+        return []
+    try:
+        ws = sh.worksheet("Baseline_Week5")
+        values = ws.col_values(1)[1:]  # skip header
+        return [v.strip() for v in values if v.strip()][:25]
+    except Exception:
+        return []
+
+def load_previous_aggregate(gc, week_number):
+    """Load the top 25 aggregate from the previous week's archived tab."""
+    if week_number <= 6:
+        return load_manual_baseline(gc)
+    sh = open_sheet(gc)
+    if not sh:
+        return []
+    try:
+        # For simplicity, recompute from Submissions or load from archived tab
+        # Here we fall back to the most recent aggregate calculation
+        results = load_results(gc)
+        if results.empty:
+            return []
+        return results.head(25)["Team"].tolist()
+    except Exception:
+        return []
+
+def load_user_previous_ranking(gc, person):
+    """Load the user's own most recent submission (this week or prior)."""
     sh = open_sheet(gc)
     if not sh:
         return []
@@ -384,8 +411,13 @@ with tab1:
         st.info(f"Voting as: **{display_name}**")
 
         if "ranking" not in st.session_state:
-            previous = load_previous_ranking(gc, display_name)
-            st.session_state.ranking = previous if previous else []
+            # Priority: user's own previous submission > baseline (manual for week 6, aggregate thereafter)
+            own = load_user_previous_ranking(gc, display_name)
+            if own:
+                st.session_state.ranking = own
+            else:
+                baseline = load_previous_aggregate(gc, week_number)
+                st.session_state.ranking = baseline if baseline else []
 
         if "show_remove" not in st.session_state:
             st.session_state.show_remove = False
