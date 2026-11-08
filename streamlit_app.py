@@ -121,8 +121,8 @@ CENTER_STYLE = """
 
 ET = pytz.timezone("America/New_York")
 
-# Set so current week = 6
-WEEK_1_START = datetime(2026, 10, 5, tzinfo=ET)
+# Adjusted so current week calculates as 6
+WEEK_1_START = datetime(2026, 9, 28, tzinfo=ET)
 
 def get_current_week_number():
     now = datetime.now(ET)
@@ -358,13 +358,17 @@ with tab1:
         with col_right:
             st.subheader("Submit")
             if st.session_state.ranking:
-                if st.button("Submit / Update Ranking", type="primary", use_container_width=True):
+                if st.button("Submit / Update Ranking", type="primary", use_container_width=True, key="submit_btn"):
                     if save_submission(gc, display_name, st.session_state.ranking):
-                        st.success("Ranking saved.")
                         st.session_state.ranking = []
+                        st.session_state.just_submitted = True
                         st.rerun()
             else:
-                st.button("Submit / Update Ranking", disabled=True, use_container_width=True)
+                st.button("Submit / Update Ranking", disabled=True, use_container_width=True, key="submit_btn_disabled")
+            
+            if st.session_state.get("just_submitted"):
+                st.success("Ranking saved.")
+                st.session_state.just_submitted = False
 
 with tab2:
     st.subheader("Weighted Aggregate Top 25")
