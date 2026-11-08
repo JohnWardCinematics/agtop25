@@ -531,7 +531,7 @@ with tab2:
                 height=680,
                 hide_index=True,
                 column_config={
-                    "Rank": st.column_config.NumberColumn(width="small"),
+                    "Rank": st.column_config.NumberColumn(width=50),
                     "Team": st.column_config.TextColumn(width="large"),
                     "Points": st.column_config.NumberColumn(width="small"),
                     "First Place Votes": st.column_config.NumberColumn(width="small")
@@ -548,7 +548,7 @@ with tab2:
                     height=680,
                     hide_index=True,
                     column_config={
-                        "Rank": st.column_config.NumberColumn(width="small"),
+                        "Rank": st.column_config.NumberColumn(width=50),
                         "Team": st.column_config.TextColumn(width="large"),
                         "Points": st.column_config.NumberColumn(width="small"),
                         "First Place Votes": st.column_config.NumberColumn(width="small")
