@@ -146,7 +146,10 @@ st.markdown("""
         max-width: 160px;
         text-align: center !important;
     }
-    .results-table th.team, .results-table td.team {
+    .results-table th.team {
+        text-align: center !important;
+    }
+    .results-table td.team {
         width: auto;
         text-align: left !important;
     }
@@ -368,7 +371,7 @@ def load_results(_gc):
             weights_df = pd.DataFrame()
 
         points = defaultdict(float)
-        firsts = defaultdict(float)  # now weighted
+        firsts = defaultdict(float)
         for _, row in latest.iterrows():
             person = row["Person"]
             w = 1.0
@@ -379,7 +382,7 @@ def load_results(_gc):
                 if team:
                     points[team] += (26 - pos) * w
                     if pos == 1:
-                        firsts[team] += w  # weight applied to first-place votes
+                        firsts[team] += w
         results = [{"Team": t, "Points": int(round(p)), "First Place Votes": int(round(firsts[t]))}
                    for t, p in points.items()]
         results.sort(key=lambda x: (-x["Points"], -x["First Place Votes"]))
