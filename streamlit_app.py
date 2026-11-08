@@ -270,27 +270,23 @@ def save_submission(gc, person, ranking):
         return False
 
 def load_manual_baseline(gc):
-    """Load the manual Week 5 baseline from the Baseline_Week5 tab."""
     sh = open_sheet(gc)
     if not sh:
         return []
     try:
         ws = sh.worksheet("Baseline_Week5")
-        values = ws.col_values(1)[1:]  # skip header
+        values = ws.col_values(1)[1:]
         return [v.strip() for v in values if v.strip()][:25]
     except Exception:
         return []
 
 def load_previous_aggregate(gc, week_number):
-    """Load the top 25 aggregate from the previous week's archived tab."""
     if week_number <= 6:
         return load_manual_baseline(gc)
     sh = open_sheet(gc)
     if not sh:
         return []
     try:
-        # For simplicity, recompute from Submissions or load from archived tab
-        # Here we fall back to the most recent aggregate calculation
         results = load_results(gc)
         if results.empty:
             return []
@@ -299,7 +295,6 @@ def load_previous_aggregate(gc, week_number):
         return []
 
 def load_user_previous_ranking(gc, person):
-    """Load the user's own most recent submission (this week or prior)."""
     sh = open_sheet(gc)
     if not sh:
         return []
@@ -411,7 +406,6 @@ with tab1:
         st.info(f"Voting as: **{display_name}**")
 
         if "ranking" not in st.session_state:
-            # Priority: user's own previous submission > baseline (manual for week 6, aggregate thereafter)
             own = load_user_previous_ranking(gc, display_name)
             if own:
                 st.session_state.ranking = own
@@ -535,7 +529,13 @@ with tab2:
                 top25[["Rank", "Team", "Points", "First Place Votes"]],
                 use_container_width=True,
                 height=680,
-                hide_index=True
+                hide_index=True,
+                column_config={
+                    "Rank": st.column_config.NumberColumn(width="small"),
+                    "Team": st.column_config.TextColumn(width="large"),
+                    "Points": st.column_config.NumberColumn(width="small"),
+                    "First Place Votes": st.column_config.NumberColumn(width="small")
+                }
             )
         
         with col_res_right:
@@ -546,7 +546,13 @@ with tab2:
                     others[["Rank", "Team", "Points", "First Place Votes"]],
                     use_container_width=True,
                     height=680,
-                    hide_index=True
+                    hide_index=True,
+                    column_config={
+                        "Rank": st.column_config.NumberColumn(width="small"),
+                        "Team": st.column_config.TextColumn(width="large"),
+                        "Points": st.column_config.NumberColumn(width="small"),
+                        "First Place Votes": st.column_config.NumberColumn(width="small")
+                    }
                 )
             else:
                 st.info("No other teams received votes.")
