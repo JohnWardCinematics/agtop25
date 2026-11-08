@@ -46,7 +46,7 @@ st.markdown("""
     button[data-baseweb="tab"][aria-selected="true"],
     button[data-baseweb="tab"]:hover { background-color: #D4AF37 !important; color: #1a1a1a !important; }
 
-    /* Default button style (yellow) */
+    /* Default buttons stay yellow */
     .stButton > button {
         background-color: #D4AF37 !important; 
         color: #1a1a1a !important; 
@@ -63,18 +63,17 @@ st.markdown("""
     }
     .stButton > button:hover { background-color: #E6C200 !important; }
 
-    /* SUBMIT button: green when enabled */
-    button[key="submit_btn"] {
+    /* FORCE green on enabled submit */
+    div[data-testid="stButton"] > button[kind="primary"] {
         background-color: #4CAF50 !important;
         color: #1a1a1a !important;
     }
-    button[key="submit_btn"]:hover {
+    div[data-testid="stButton"] > button[kind="primary"]:hover {
         background-color: #66BB6A !important;
     }
 
-    /* SUBMIT button: red when disabled */
-    button[key="submit_btn_disabled"],
-    button[key="submit_btn_disabled"]:disabled {
+    /* FORCE red on disabled submit */
+    div[data-testid="stButton"] > button:disabled {
         background-color: #d32f2f !important;
         color: #ffffff !important;
         opacity: 1 !important;
