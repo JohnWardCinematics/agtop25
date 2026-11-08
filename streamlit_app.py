@@ -63,21 +63,26 @@ st.markdown("""
     }
     .stButton > button:hover { background-color: #E6C200 !important; }
 
-    /* FORCE green on enabled submit */
+    /* ENABLED submit: green + bright outline + white text */
     div[data-testid="stButton"] > button[kind="primary"] {
         background-color: #4CAF50 !important;
-        color: #1a1a1a !important;
+        color: #ffffff !important;
+        border: 3px solid #00FF00 !important;
+        box-shadow: 0 0 8px #00FF00 !important;
     }
     div[data-testid="stButton"] > button[kind="primary"]:hover {
         background-color: #66BB6A !important;
+        border: 3px solid #00FF00 !important;
     }
 
-    /* FORCE red on disabled submit */
+    /* DISABLED submit: red + white text */
     div[data-testid="stButton"] > button:disabled {
         background-color: #d32f2f !important;
         color: #ffffff !important;
         opacity: 1 !important;
         cursor: not-allowed !important;
+        border: none !important;
+        box-shadow: none !important;
     }
 
     .center-header {
