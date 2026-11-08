@@ -121,8 +121,8 @@ CENTER_STYLE = """
 
 ET = pytz.timezone("America/New_York")
 
-# Set so current week = 6 (adjust the date if needed)
-WEEK_1_START = datetime(2026, 10, 5, tzinfo=ET)  # Monday of Week 1
+# Set so current week = 6
+WEEK_1_START = datetime(2026, 10, 5, tzinfo=ET)
 
 def get_current_week_number():
     now = datetime.now(ET)
@@ -146,7 +146,7 @@ def format_date_range():
             suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
         return f"{n}{suffix}"
     def fmt(d):
-        return f"{d.strftime('%B')} {ordinal(d.day)}, '{d.strftime('%y')}"
+        return f"{d.strftime('%B')} {ordinal(d.day)}"
     return f"{fmt(monday)} - {fmt(sunday)}"
 
 SCOPES = [
@@ -183,17 +183,14 @@ def open_sheet(gc):
         return None
 
 def archive_week(gc, week_number):
-    """Copy current Submissions to a new tab named 'Week X' if it doesn't exist."""
     sh = open_sheet(gc)
     if not sh:
         return False
     tab_name = f"Week {week_number}"
     try:
-        # Check if tab already exists
         existing = [ws.title for ws in sh.worksheets()]
         if tab_name in existing:
-            return True  # already archived
-        # Create new tab and copy data
+            return True
         source = sh.worksheet("Submissions")
         data = source.get_all_values()
         new_ws = sh.add_worksheet(title=tab_name, rows=len(data)+10, cols=30)
@@ -307,7 +304,6 @@ st.caption(f"Logged in as: {display_name}")
 
 gc = get_gsheet_client()
 
-# Auto-archive previous week if window just closed
 if not is_open() and week_number > 1:
     archive_week(gc, week_number - 1)
 
