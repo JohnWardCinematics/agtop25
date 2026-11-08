@@ -121,6 +121,14 @@ CENTER_STYLE = """
 
 ET = pytz.timezone("America/New_York")
 
+# Set so current week = 6 (adjust the date if needed)
+WEEK_1_START = datetime(2026, 10, 5, tzinfo=ET)  # Monday of Week 1
+
+def get_current_week_number():
+    now = datetime.now(ET)
+    days_since_start = (now - WEEK_1_START).days
+    return max(1, (days_since_start // 7) + 1)
+
 def get_current_week_range():
     now = datetime.now(ET)
     days_since_monday = now.weekday()
@@ -173,6 +181,28 @@ def open_sheet(gc):
         st.error(f"Could not open Google Sheet: {type(e).__name__}")
         st.code(str(e))
         return None
+
+def archive_week(gc, week_number):
+    """Copy current Submissions to a new tab named 'Week X' if it doesn't exist."""
+    sh = open_sheet(gc)
+    if not sh:
+        return False
+    tab_name = f"Week {week_number}"
+    try:
+        # Check if tab already exists
+        existing = [ws.title for ws in sh.worksheets()]
+        if tab_name in existing:
+            return True  # already archived
+        # Create new tab and copy data
+        source = sh.worksheet("Submissions")
+        data = source.get_all_values()
+        new_ws = sh.add_worksheet(title=tab_name, rows=len(data)+10, cols=30)
+        if data:
+            new_ws.update("A1", data)
+        return True
+    except Exception as e:
+        st.error(f"Archive failed: {e}")
+        return False
 
 def save_submission(gc, person, ranking):
     sh = open_sheet(gc)
@@ -269,12 +299,18 @@ if not check_login():
     st.stop()
 
 display_name = get_display_name(st.session_state.username)
-
+week_number = get_current_week_number()
 date_range = format_date_range()
-st.title(f"Associated Goys Top 25 Poll | {date_range}")
+
+st.title(f"Associated Goys Top 25 Poll | Week {week_number} | {date_range}")
 st.caption(f"Logged in as: {display_name}")
 
 gc = get_gsheet_client()
+
+# Auto-archive previous week if window just closed
+if not is_open() and week_number > 1:
+    archive_week(gc, week_number - 1)
+
 teams = load_teams()
 
 tab1, tab2 = st.tabs(["Submit Rankings", "Current Results"])
