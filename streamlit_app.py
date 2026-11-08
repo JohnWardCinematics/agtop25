@@ -88,9 +88,14 @@ st.markdown("""
         padding-right: 0.15rem !important;
     }
 
-    /* Compact results table */
+    /* Compact results rows so 25 fit in ~680px */
     div[data-testid="stDataFrame"] {
-        font-size: 0.82rem !important;
+        font-size: 0.78rem !important;
+    }
+    div[data-testid="stDataFrame"] td, 
+    div[data-testid="stDataFrame"] th {
+        padding: 1px 4px !important;
+        line-height: 1.15 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -397,10 +402,10 @@ with tab2:
         with col_res_left:
             st.markdown("**Top 25**")
             top25.insert(0, "Rank", range(1, len(top25) + 1))
-            # No height limit so all 25 show without scroll
             st.dataframe(
                 top25[["Rank", "Team", "Points", "First Place Votes"]],
                 use_container_width=True,
+                height=680,
                 hide_index=True
             )
         
