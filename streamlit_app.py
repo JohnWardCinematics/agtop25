@@ -88,7 +88,6 @@ st.markdown("""
         padding-right: 0.15rem !important;
     }
 
-    /* Compact results rows so 25 fit in ~680px */
     div[data-testid="stDataFrame"] {
         font-size: 0.78rem !important;
     }
@@ -239,6 +238,27 @@ def save_submission(gc, person, ranking):
         st.error(f"Save failed: {e}")
         return False
 
+def load_previous_ranking(gc, person):
+    sh = open_sheet(gc)
+    if not sh:
+        return []
+    try:
+        ws = sh.worksheet("Submissions")
+        records = ws.get_all_records()
+        user_rows = [r for r in records if r.get("Person") == person]
+        if not user_rows:
+            return []
+        user_rows.sort(key=lambda r: r.get("Timestamp", ""), reverse=True)
+        latest = user_rows[0]
+        ranking = []
+        for i in range(1, 26):
+            team = latest.get(f"Rank{i}")
+            if team:
+                ranking.append(team)
+        return ranking
+    except Exception:
+        return []
+
 @st.cache_data(ttl=30)
 def load_results(_gc):
     sh = open_sheet(_gc)
@@ -332,7 +352,8 @@ with tab1:
         st.info(f"Voting as: **{display_name}**")
 
         if "ranking" not in st.session_state:
-            st.session_state.ranking = []
+            previous = load_previous_ranking(gc, display_name)
+            st.session_state.ranking = previous if previous else []
 
         col_left, col_center, col_right = st.columns([1, 2, 1])
 
@@ -347,7 +368,21 @@ with tab1:
                             st.rerun()
 
         with col_center:
-            st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
+            header_left, header_right = st.columns([3, 1])
+            with header_left:
+                st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
+            with header_right:
+                if st.session_state.ranking:
+                    to_remove = st.selectbox(
+                        "Remove",
+                        options=[""] + st.session_state.ranking,
+                        index=0,
+                        key="remove_select",
+                        label_visibility="collapsed"
+                    )
+                    if to_remove and st.button("Remove Team", key="do_remove", use_container_width=True):
+                        st.session_state.ranking.remove(to_remove)
+                        st.rerun()
 
             num_col, sort_col = st.columns([0.06, 0.94])
 
