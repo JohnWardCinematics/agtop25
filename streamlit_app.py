@@ -174,6 +174,49 @@ def open_sheet(gc):
         st.code(str(e))
         return None
 
+def load_voters(gc):
+    sh = open_sheet(gc)
+    if not sh:
+        return {}
+    try:
+        ws = sh.worksheet("Voters")
+        records = ws.get_all_records()
+        return {r["Username"]: {"password": r["Password"], "display": r.get("DisplayName", r["Username"])} for r in records}
+    except Exception:
+        return {}
+
+def update_password(gc, username, new_password):
+    sh = open_sheet(gc)
+    if not sh:
+        return False
+    try:
+        ws = sh.worksheet("Voters")
+        records = ws.get_all_records()
+        for i, rec in enumerate(records, start=2):
+            if rec.get("Username") == username:
+                ws.update_cell(i, 2, new_password)  # column B = Password
+                return True
+        return False
+    except Exception as e:
+        st.error(f"Could not update password: {e}")
+        return False
+
+def update_display_name(gc, username, new_display):
+    sh = open_sheet(gc)
+    if not sh:
+        return False
+    try:
+        ws = sh.worksheet("Voters")
+        records = ws.get_all_records()
+        for i, rec in enumerate(records, start=2):
+            if rec.get("Username") == username:
+                ws.update_cell(i, 3, new_display)  # column C = DisplayName
+                return True
+        return False
+    except Exception as e:
+        st.error(f"Could not update display name: {e}")
+        return False
+
 def save_submission(gc, person, ranking):
     sh = open_sheet(gc)
     if not sh:
@@ -239,7 +282,7 @@ def load_results(_gc):
         return pd.DataFrame()
 
 # --- Authentication ---
-def check_login():
+def check_login(gc):
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
         st.session_state.username = ""
@@ -250,8 +293,8 @@ def check_login():
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
         if st.button("Log In"):
-            voters = st.secrets.get("voters", {})
-            if username in voters and voters[username] == password:
+            voters = load_voters(gc)
+            if username in voters and voters[username]["password"] == password:
                 st.session_state.authenticated = True
                 st.session_state.username = username
                 st.rerun()
@@ -261,14 +304,45 @@ def check_login():
     return True
 
 # --- UI ---
-if not check_login():
+gc = get_gsheet_client()
+
+if not check_login(gc):
     st.stop()
+
+voters = load_voters(gc)
+display_name = voters.get(st.session_state.username, {}).get("display", st.session_state.username)
 
 date_range = format_date_range()
 st.title(f"Associated Goys Top 25 Poll | {date_range}")
-st.caption(f"Logged in as: {st.session_state.username}")
+st.caption(f"Logged in as: {display_name}")
 
-gc = get_gsheet_client()
+# Account settings
+with st.expander("Account Settings"):
+    col1, col2 = st.columns(2)
+    with col1:
+        st.write("**Change Password**")
+        new_pass = st.text_input("New password", type="password", key="new_pass")
+        confirm = st.text_input("Confirm new password", type="password", key="confirm_pass")
+        if st.button("Update Password"):
+            if new_pass and new_pass == confirm:
+                if update_password(gc, st.session_state.username, new_pass):
+                    st.success("Password updated.")
+                else:
+                    st.error("Could not update password.")
+            else:
+                st.error("Passwords do not match or are empty.")
+    with col2:
+        st.write("**Change Display Name**")
+        new_display = st.text_input("New display name", value=display_name, key="new_display")
+        if st.button("Update Display Name"):
+            if new_display.strip():
+                if update_display_name(gc, st.session_state.username, new_display.strip()):
+                    st.success("Display name updated. Refresh the page to see it everywhere.")
+                else:
+                    st.error("Could not update display name.")
+            else:
+                st.error("Display name cannot be empty.")
+
 teams = load_teams()
 
 tab1, tab2 = st.tabs(["Submit Rankings", "Current Results"])
@@ -277,9 +351,7 @@ with tab1:
     if not is_open():
         st.error("Submissions are closed until next week (cutoff is Sunday 11:59 PM ET).")
     else:
-        # Use the logged-in username as the voter name
-        person = st.session_state.username
-        st.info(f"Voting as: **{person}**")
+        st.info(f"Voting as: **{display_name}**")
 
         if "ranking" not in st.session_state:
             st.session_state.ranking = []
@@ -297,7 +369,7 @@ with tab1:
                             st.rerun()
 
         with col_center:
-            st.markdown(f'<h3 class="center-header">{person} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
+            st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
 
             num_col, sort_col = st.columns([0.06, 0.94])
 
@@ -323,7 +395,7 @@ with tab1:
             st.subheader("Submit")
             if st.session_state.ranking:
                 if st.button("Submit / Update Ranking", type="primary", use_container_width=True):
-                    if save_submission(gc, person, st.session_state.ranking):
+                    if save_submission(gc, display_name, st.session_state.ranking):
                         st.success("Ranking saved.")
                         st.session_state.ranking = []
                         st.rerun()
