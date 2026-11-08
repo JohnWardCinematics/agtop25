@@ -126,6 +126,15 @@ st.markdown("""
     div[data-testid="stDataFrame"] th {
         padding: 1px 4px !important;
         line-height: 1.15 !important;
+        text-align: left !important;
+    }
+    div[data-testid="stDataFrame"] th {
+        text-align: center !important;
+    }
+
+    /* Hide the three-dot column menu */
+    div[data-testid="stDataFrame"] [data-testid="stElementToolbar"] {
+        display: none !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -531,7 +540,7 @@ with tab2:
                 height=680,
                 hide_index=True,
                 column_config={
-                    "Rank": st.column_config.NumberColumn(width=50),
+                    "Rank": st.column_config.NumberColumn(width=45),
                     "Team": st.column_config.TextColumn(width="large"),
                     "Points": st.column_config.NumberColumn(width="small"),
                     "First Place Votes": st.column_config.NumberColumn(width="small")
@@ -548,7 +557,7 @@ with tab2:
                     height=680,
                     hide_index=True,
                     column_config={
-                        "Rank": st.column_config.NumberColumn(width=50),
+                        "Rank": st.column_config.NumberColumn(width=45),
                         "Team": st.column_config.TextColumn(width="large"),
                         "Points": st.column_config.NumberColumn(width="small"),
                         "First Place Votes": st.column_config.NumberColumn(width="small")
