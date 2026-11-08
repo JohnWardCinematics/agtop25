@@ -106,6 +106,16 @@ st.markdown("""
         padding: 1px 4px !important;
         line-height: 1.15 !important;
     }
+
+    /* Submit button states */
+    button[kind="primary"][data-testid="baseButton-primary"] {
+        background-color: #4CAF50 !important;
+    }
+    button[kind="primary"][data-testid="baseButton-primary"]:disabled {
+        background-color: #d32f2f !important;
+        color: #ffffff !important;
+        opacity: 0.7;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -341,12 +351,9 @@ display_name = get_display_name(st.session_state.username)
 week_number = get_current_week_number()
 date_range = format_date_range()
 
-# Main header with logged-in status on the left
-header_left, header_center = st.columns([1, 4])
-with header_left:
-    st.markdown(f"<div style='text-align: left; margin-top: 1.1rem; font-size: 0.95rem; color: #aaaaaa;'>Logged in as: {display_name}</div>", unsafe_allow_html=True)
-with header_center:
-    st.title(f"Associated Goys Top 25 Poll | Week {week_number} | {date_range}")
+# Main header re-centered; logged-in text stays left
+st.markdown(f"<div style='text-align: left; margin-top: 1.1rem; font-size: 0.95rem; color: #aaaaaa; position: absolute;'>Logged in as: {display_name}</div>", unsafe_allow_html=True)
+st.title(f"Associated Goys Top 25 Poll | Week {week_number} | {date_range}")
 
 gc = get_gsheet_client()
 
@@ -409,7 +416,7 @@ with tab1:
                     st.rerun()
 
         with col_right:
-            st.markdown('<div class="side-header">Submit</div>', unsafe_allow_html=True)
+            st.markdown('<div class="side-header">CONTROLS</div>', unsafe_allow_html=True)
             
             # CLEAR ALL with confirmation
             if not st.session_state.confirm_clear:
@@ -449,7 +456,8 @@ with tab1:
                     st.rerun()
 
             st.write("")  # spacer
-            if st.session_state.ranking:
+            has_25 = len(st.session_state.ranking) == 25
+            if has_25:
                 if st.button("SUBMIT/UPDATE RANKINGS", type="primary", use_container_width=True, key="submit_btn"):
                     if save_submission(gc, display_name, st.session_state.ranking):
                         st.session_state.ranking = []
