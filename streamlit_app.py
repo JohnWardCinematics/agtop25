@@ -45,7 +45,9 @@ st.markdown("""
     button[data-baseweb="tab"] { font-size: 1.05rem !important; font-weight: 600 !important; padding: 0.4rem 1rem !important; }
     button[data-baseweb="tab"][aria-selected="true"],
     button[data-baseweb="tab"]:hover { background-color: #D4AF37 !important; color: #1a1a1a !important; }
-    .stButton > button, button[kind="primary"] {
+
+    /* Default button style (yellow) */
+    .stButton > button {
         background-color: #D4AF37 !important; 
         color: #1a1a1a !important; 
         border: none !important;
@@ -59,7 +61,25 @@ st.markdown("""
         font-family: 'Bebas Neue', sans-serif !important;
         letter-spacing: 2px !important;
     }
-    .stButton > button:hover, button[kind="primary"]:hover { background-color: #E6C200 !important; }
+    .stButton > button:hover { background-color: #E6C200 !important; }
+
+    /* SUBMIT button: green when enabled */
+    button[key="submit_btn"] {
+        background-color: #4CAF50 !important;
+        color: #1a1a1a !important;
+    }
+    button[key="submit_btn"]:hover {
+        background-color: #66BB6A !important;
+    }
+
+    /* SUBMIT button: red when disabled */
+    button[key="submit_btn_disabled"],
+    button[key="submit_btn_disabled"]:disabled {
+        background-color: #d32f2f !important;
+        color: #ffffff !important;
+        opacity: 1 !important;
+        cursor: not-allowed !important;
+    }
 
     .center-header {
         font-size: 1.45rem !important;
@@ -105,16 +125,6 @@ st.markdown("""
     div[data-testid="stDataFrame"] th {
         padding: 1px 4px !important;
         line-height: 1.15 !important;
-    }
-
-    /* Submit button states */
-    button[kind="primary"][data-testid="baseButton-primary"] {
-        background-color: #4CAF50 !important;
-    }
-    button[kind="primary"][data-testid="baseButton-primary"]:disabled {
-        background-color: #d32f2f !important;
-        color: #ffffff !important;
-        opacity: 0.7;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -351,7 +361,6 @@ display_name = get_display_name(st.session_state.username)
 week_number = get_current_week_number()
 date_range = format_date_range()
 
-# Main header re-centered; logged-in text stays left
 st.markdown(f"<div style='text-align: left; margin-top: 1.1rem; font-size: 0.95rem; color: #aaaaaa; position: absolute;'>Logged in as: {display_name}</div>", unsafe_allow_html=True)
 st.title(f"Associated Goys Top 25 Poll | Week {week_number} | {date_range}")
 
@@ -418,7 +427,6 @@ with tab1:
         with col_right:
             st.markdown('<div class="side-header">CONTROLS</div>', unsafe_allow_html=True)
             
-            # CLEAR ALL with confirmation
             if not st.session_state.confirm_clear:
                 if st.button("CLEAR ALL", use_container_width=True, key="clear_all"):
                     st.session_state.confirm_clear = True
@@ -437,7 +445,6 @@ with tab1:
                         st.session_state.confirm_clear = False
                         st.rerun()
 
-            # REMOVE
             if st.button("REMOVE", use_container_width=True, key="toggle_remove"):
                 st.session_state.show_remove = not st.session_state.show_remove
                 st.rerun()
@@ -455,7 +462,7 @@ with tab1:
                     st.session_state.show_remove = False
                     st.rerun()
 
-            st.write("")  # spacer
+            st.write("")
             has_25 = len(st.session_state.ranking) == 25
             if has_25:
                 if st.button("SUBMIT/UPDATE RANKINGS", type="primary", use_container_width=True, key="submit_btn"):
