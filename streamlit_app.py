@@ -105,6 +105,7 @@ st.markdown("""
         color: #D4AF37;
         font-size: 0.85rem;
         margin-top: 4px;
+        cursor: pointer;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -365,6 +366,9 @@ with tab1:
             previous = load_previous_ranking(gc, display_name)
             st.session_state.ranking = previous if previous else []
 
+        if "show_remove" not in st.session_state:
+            st.session_state.show_remove = False
+
         col_left, col_center, col_right = st.columns([1, 2, 1])
 
         with col_left:
@@ -378,28 +382,30 @@ with tab1:
                             st.rerun()
 
         with col_center:
-            # Header row: CLEAR ALL | centered title | DRAG HERE TO REMOVE
             h_left, h_center, h_right = st.columns([1, 2, 1])
             with h_left:
                 if st.button("CLEAR ALL", use_container_width=True, key="clear_all"):
                     st.session_state.ranking = []
+                    st.session_state.show_remove = False
                     st.rerun()
             with h_center:
                 st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
             with h_right:
-                st.markdown('<div class="remove-zone">DRAG HERE TO REMOVE</div>', unsafe_allow_html=True)
-                # Note: true external drag-to-remove is limited in streamlit-sortables.
-                # This zone is visual. For reliable removal use the select below if needed.
-                if st.session_state.ranking:
+                if st.button("REMOVE", use_container_width=True, key="toggle_remove"):
+                    st.session_state.show_remove = not st.session_state.show_remove
+                    st.rerun()
+                
+                if st.session_state.show_remove and st.session_state.ranking:
                     to_remove = st.selectbox(
-                        "or select to remove",
+                        "Select team to remove",
                         options=[""] + st.session_state.ranking,
                         index=0,
-                        key="quick_remove",
+                        key="remove_select",
                         label_visibility="collapsed"
                     )
-                    if to_remove and st.button("Remove Selected", key="remove_selected", use_container_width=True):
+                    if to_remove and st.button("Confirm Remove", key="confirm_remove", use_container_width=True):
                         st.session_state.ranking.remove(to_remove)
+                        st.session_state.show_remove = False
                         st.rerun()
 
             num_col, sort_col = st.columns([0.06, 0.94])
@@ -416,63 +422,4 @@ with tab1:
                     st.session_state.ranking,
                     direction="vertical",
                     key=f"ranking_{len(st.session_state.ranking)}",
-                    custom_style=CENTER_STYLE
-                )
-                if center_result != st.session_state.ranking:
-                    st.session_state.ranking = center_result
-                    st.rerun()
-
-        with col_right:
-            st.markdown("**Submit**", unsafe_allow_html=True)
-            if st.session_state.ranking:
-                if st.button("Submit / Update Ranking", type="primary", use_container_width=True, key="submit_btn"):
-                    if save_submission(gc, display_name, st.session_state.ranking):
-                        st.session_state.ranking = []
-                        st.session_state.just_submitted = True
-                        st.rerun()
-            else:
-                st.button("Submit / Update Ranking", disabled=True, use_container_width=True, key="submit_btn_disabled")
-            
-            if st.session_state.get("just_submitted"):
-                st.success(f"Rankings Submitted - You may continue to submit rankings until the end of the Week {week_number} window and they will overwrite previous submissions.")
-                st.session_state.just_submitted = False
-
-with tab2:
-    header_col, refresh_col = st.columns([3, 1])
-    with header_col:
-        st.markdown("**Weighted Aggregate Results**")
-    with refresh_col:
-        if st.button("Refresh Results", use_container_width=True):
-            st.cache_data.clear()
-    
-    results = load_results(gc)
-    if not results.empty:
-        top25 = results.head(25).copy()
-        others = results.iloc[25:].copy()
-        
-        col_res_left, col_res_right = st.columns([1.2, 1])
-        
-        with col_res_left:
-            st.markdown("**Top 25**")
-            top25.insert(0, "Rank", range(1, len(top25) + 1))
-            st.dataframe(
-                top25[["Rank", "Team", "Points", "First Place Votes"]],
-                use_container_width=True,
-                height=680,
-                hide_index=True
-            )
-        
-        with col_res_right:
-            st.markdown("**Others Receiving Votes**")
-            if not others.empty:
-                others.insert(0, "Rank", range(26, 26 + len(others)))
-                st.dataframe(
-                    others[["Rank", "Team", "Points", "First Place Votes"]],
-                    use_container_width=True,
-                    height=680,
-                    hide_index=True
-                )
-            else:
-                st.info("No other teams received votes.")
-    else:
-        st.info("No submissions yet (or sheet temporarily unavailable).")
+                    custom_style
