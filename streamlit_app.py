@@ -126,6 +126,7 @@ st.markdown("""
         font-size: 0.78rem;
         font-family: 'Bebas Neue', sans-serif;
         letter-spacing: 1px;
+        table-layout: fixed;
     }
     .results-table th {
         text-align: center !important;
@@ -134,17 +135,22 @@ st.markdown("""
         font-weight: 700;
     }
     .results-table td {
-        text-align: left !important;
         padding: 2px 6px;
         border-bottom: 1px solid #333;
     }
-    .results-table td.rank {
+    .results-table th.rank, .results-table td.rank {
         width: 40px;
         max-width: 40px;
         text-align: left !important;
     }
-    .results-table td.team {
+    .results-table th.team, .results-table td.team {
         width: auto;
+        text-align: left !important;
+    }
+    .results-table th.num, .results-table td.num {
+        width: 80px;
+        max-width: 80px;
+        text-align: center !important;
     }
     .results-table-container {
         height: 680px;
@@ -405,11 +411,11 @@ def check_login():
 
 def render_results_table(df, start_rank=1):
     html = '<div class="results-table-container"><table class="results-table"><thead><tr>'
-    html += '<th>Rank</th><th>Team</th><th>Points</th><th>First Place Votes</th>'
+    html += '<th class="rank">Rank</th><th class="team">Team</th><th class="num">Points</th><th class="num">First Place Votes</th>'
     html += '</tr></thead><tbody>'
-    for i, row in df.iterrows():
-        rank = start_rank + (i if isinstance(i, int) else 0)
-        html += f'<tr><td class="rank">{rank}</td><td class="team">{row["Team"]}</td><td>{row["Points"]}</td><td>{row["First Place Votes"]}</td></tr>'
+    for idx, row in df.iterrows():
+        rank = start_rank + idx
+        html += f'<tr><td class="rank">{rank}</td><td class="team">{row["Team"]}</td><td class="num">{row["Points"]}</td><td class="num">{row["First Place Votes"]}</td></tr>'
     html += '</tbody></table></div>'
     st.markdown(html, unsafe_allow_html=True)
 
