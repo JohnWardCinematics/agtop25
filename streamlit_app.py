@@ -133,7 +133,7 @@ st.markdown("""
         padding: 4px 6px;
         border-bottom: 1px solid #444;
         font-weight: 700;
-        font-size: 1.15rem !important;  /* ~4 sizes bigger than 0.78rem */
+        font-size: 1.15rem !important;
         white-space: nowrap;
     }
     .results-table td {
@@ -142,17 +142,17 @@ st.markdown("""
         font-size: 0.78rem;
     }
     .results-table th.rank, .results-table td.rank {
-        width: 40px;
-        max-width: 40px;
-        text-align: left !important;
+        width: 130px;
+        max-width: 130px;
+        text-align: center !important;
     }
     .results-table th.team, .results-table td.team {
         width: auto;
         text-align: left !important;
     }
     .results-table th.num, .results-table td.num {
-        width: 110px;
-        max-width: 110px;
+        width: 130px;
+        max-width: 130px;
         text-align: center !important;
         white-space: nowrap;
     }
@@ -380,7 +380,7 @@ def load_results(_gc):
                     points[team] += (26 - pos) * w
                     if pos == 1:
                         firsts[team] += 1
-        results = [{"Team": t, "Points": round(p, 2), "First Place Votes": firsts[t]}
+        results = [{"Team": t, "Points": int(round(p)), "First Place Votes": firsts[t]}
                    for t, p in points.items()]
         results.sort(key=lambda x: (-x["Points"], -x["First Place Votes"]))
         return pd.DataFrame(results)
@@ -419,7 +419,7 @@ def render_results_table(df, start_rank=1):
     html += '</tr></thead><tbody>'
     for idx, row in df.iterrows():
         rank = start_rank + idx
-        html += f'<tr><td class="rank">{rank}</td><td class="team">{row["Team"]}</td><td class="num">{row["Points"]}</td><td class="num">{row["First Place Votes"]}</td></tr>'
+        html += f'<tr><td class="rank">{rank}</td><td class="team">{row["Team"]}</td><td class="num">{int(row["Points"])}</td><td class="num">{row["First Place Votes"]}</td></tr>'
     html += '</tbody></table></div>'
     st.markdown(html, unsafe_allow_html=True)
 
