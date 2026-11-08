@@ -119,22 +119,36 @@ st.markdown("""
         padding-right: 0.15rem !important;
     }
 
-    div[data-testid="stDataFrame"] {
-        font-size: 0.78rem !important;
+    /* Custom results table */
+    .results-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.78rem;
+        font-family: 'Bebas Neue', sans-serif;
+        letter-spacing: 1px;
     }
-    div[data-testid="stDataFrame"] td, 
-    div[data-testid="stDataFrame"] th {
-        padding: 1px 4px !important;
-        line-height: 1.15 !important;
+    .results-table th {
+        text-align: center !important;
+        padding: 4px 6px;
+        border-bottom: 1px solid #444;
+        font-weight: 700;
+    }
+    .results-table td {
+        text-align: left !important;
+        padding: 2px 6px;
+        border-bottom: 1px solid #333;
+    }
+    .results-table td.rank {
+        width: 40px;
+        max-width: 40px;
         text-align: left !important;
     }
-    div[data-testid="stDataFrame"] th {
-        text-align: center !important;
+    .results-table td.team {
+        width: auto;
     }
-
-    /* Hide the three-dot column menu */
-    div[data-testid="stDataFrame"] [data-testid="stElementToolbar"] {
-        display: none !important;
+    .results-table-container {
+        height: 680px;
+        overflow-y: auto;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -389,6 +403,16 @@ def check_login():
         return False
     return True
 
+def render_results_table(df, start_rank=1):
+    html = '<div class="results-table-container"><table class="results-table"><thead><tr>'
+    html += '<th>Rank</th><th>Team</th><th>Points</th><th>First Place Votes</th>'
+    html += '</tr></thead><tbody>'
+    for i, row in df.iterrows():
+        rank = start_rank + (i if isinstance(i, int) else 0)
+        html += f'<tr><td class="rank">{rank}</td><td class="team">{row["Team"]}</td><td>{row["Points"]}</td><td>{row["First Place Votes"]}</td></tr>'
+    html += '</tbody></table></div>'
+    st.markdown(html, unsafe_allow_html=True)
+
 if not check_login():
     st.stop()
 
@@ -533,36 +557,12 @@ with tab2:
         
         with col_res_left:
             st.markdown("**Top 25**")
-            top25.insert(0, "Rank", range(1, len(top25) + 1))
-            st.dataframe(
-                top25[["Rank", "Team", "Points", "First Place Votes"]],
-                use_container_width=True,
-                height=680,
-                hide_index=True,
-                column_config={
-                    "Rank": st.column_config.NumberColumn(width=45),
-                    "Team": st.column_config.TextColumn(width="large"),
-                    "Points": st.column_config.NumberColumn(width="small"),
-                    "First Place Votes": st.column_config.NumberColumn(width="small")
-                }
-            )
+            render_results_table(top25.reset_index(drop=True), start_rank=1)
         
         with col_res_right:
             st.markdown("**Others Receiving Votes**")
             if not others.empty:
-                others.insert(0, "Rank", range(26, 26 + len(others)))
-                st.dataframe(
-                    others[["Rank", "Team", "Points", "First Place Votes"]],
-                    use_container_width=True,
-                    height=680,
-                    hide_index=True,
-                    column_config={
-                        "Rank": st.column_config.NumberColumn(width=45),
-                        "Team": st.column_config.TextColumn(width="large"),
-                        "Points": st.column_config.NumberColumn(width="small"),
-                        "First Place Votes": st.column_config.NumberColumn(width="small")
-                    }
-                )
+                render_results_table(others.reset_index(drop=True), start_rank=26)
             else:
                 st.info("No other teams received votes.")
     else:
