@@ -368,7 +368,7 @@ def load_results(_gc):
             weights_df = pd.DataFrame()
 
         points = defaultdict(float)
-        firsts = defaultdict(int)
+        firsts = defaultdict(float)  # now weighted
         for _, row in latest.iterrows():
             person = row["Person"]
             w = 1.0
@@ -379,8 +379,8 @@ def load_results(_gc):
                 if team:
                     points[team] += (26 - pos) * w
                     if pos == 1:
-                        firsts[team] += 1
-        results = [{"Team": t, "Points": int(round(p)), "First Place Votes": firsts[t]}
+                        firsts[team] += w  # weight applied to first-place votes
+        results = [{"Team": t, "Points": int(round(p)), "First Place Votes": int(round(firsts[t]))}
                    for t, p in points.items()]
         results.sort(key=lambda x: (-x["Points"], -x["First Place Votes"]))
         return pd.DataFrame(results)
