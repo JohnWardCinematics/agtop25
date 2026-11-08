@@ -37,6 +37,12 @@ st.markdown("""
         margin: 0.3rem 0 !important; 
         text-align: center !important; 
     }
+    /* Remove anchor/link icons from headers */
+    h1 a, h2 a, h3 a, h4 a, h5 a, h6 a,
+    .stSubheader a, [data-testid="stHeader"] a {
+        display: none !important;
+        pointer-events: none !important;
+    }
     button[data-baseweb="tab"] { font-size: 1.05rem !important; font-weight: 600 !important; padding: 0.4rem 1rem !important; }
     button[data-baseweb="tab"][aria-selected="true"],
     button[data-baseweb="tab"]:hover { background-color: #D4AF37 !important; color: #1a1a1a !important; }
@@ -121,7 +127,6 @@ CENTER_STYLE = """
 
 ET = pytz.timezone("America/New_York")
 
-# Adjusted so current week calculates as 6
 WEEK_1_START = datetime(2026, 9, 28, tzinfo=ET)
 
 def get_current_week_number():
@@ -323,7 +328,7 @@ with tab1:
         col_left, col_center, col_right = st.columns([1, 2, 1])
 
         with col_left:
-            st.subheader("Available Teams (click to add)")
+            st.markdown("**Available Teams (click to add)**", unsafe_allow_html=True)
             available = [t for t in teams if t not in st.session_state.ranking]
             with st.container(height=700):
                 for team in available:
@@ -356,7 +361,7 @@ with tab1:
                     st.rerun()
 
         with col_right:
-            st.subheader("Submit")
+            st.markdown("**Submit**", unsafe_allow_html=True)
             if st.session_state.ranking:
                 if st.button("Submit / Update Ranking", type="primary", use_container_width=True, key="submit_btn"):
                     if save_submission(gc, display_name, st.session_state.ranking):
@@ -367,7 +372,7 @@ with tab1:
                 st.button("Submit / Update Ranking", disabled=True, use_container_width=True, key="submit_btn_disabled")
             
             if st.session_state.get("just_submitted"):
-                st.success("Ranking saved.")
+                st.success(f"Rankings Submitted - You may continue to submit rankings until the end of the Week {week_number} window and they will overwrite previous submissions.")
                 st.session_state.just_submitted = False
 
 with tab2:
