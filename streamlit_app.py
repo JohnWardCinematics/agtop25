@@ -372,16 +372,36 @@ with tab1:
             with header_left:
                 st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
             with header_right:
-                if st.session_state.ranking:
+                prev_week = max(1, week_number - 1)
+                option = st.selectbox(
+                    "OPTIONS",
+                    options=["OPTIONS", f"LOAD WEEK {prev_week} RANKINGS", "REMOVE TEAM", "RESET AND START OVER"],
+                    index=0,
+                    key="options_select",
+                    label_visibility="collapsed"
+                )
+                
+                if option == f"LOAD WEEK {prev_week} RANKINGS":
+                    if st.button("Load", key="load_prev", use_container_width=True):
+                        previous = load_previous_ranking(gc, display_name)
+                        st.session_state.ranking = previous if previous else []
+                        st.rerun()
+                
+                elif option == "REMOVE TEAM" and st.session_state.ranking:
                     to_remove = st.selectbox(
-                        "Remove",
+                        "Select team",
                         options=[""] + st.session_state.ranking,
                         index=0,
                         key="remove_select",
                         label_visibility="collapsed"
                     )
-                    if to_remove and st.button("Remove Team", key="do_remove", use_container_width=True):
+                    if to_remove and st.button("Remove", key="do_remove", use_container_width=True):
                         st.session_state.ranking.remove(to_remove)
+                        st.rerun()
+                
+                elif option == "RESET AND START OVER":
+                    if st.button("Reset", key="do_reset", use_container_width=True):
+                        st.session_state.ranking = []
                         st.rerun()
 
             num_col, sort_col = st.columns([0.06, 0.94])
