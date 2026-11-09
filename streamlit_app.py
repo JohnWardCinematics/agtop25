@@ -161,6 +161,72 @@ def update_password(gc, username: str, new_password: str) -> bool:
             return True
     return False
 
+def update_display_name(gc, username: str, new_display_name: str) -> bool:
+    ws = get_users_sheet(gc)
+    if not ws: return False
+    for i, r in enumerate(ws.get_all_records(), start=2):
+        if r.get("Username", "").lower() == username.lower():
+            ws.update_cell(i, 5, new_display_name.strip())  # column E = DisplayName
+            st.cache_data.clear()
+            return True
+    return False
+
+def log_vote(gc, username, week_number):
+    sh = open_sheet(gc)
+    if not sh:
+        return
+    try:
+        ws = sh.worksheet("VoteLog")
+    except Exception:
+        ws = sh.add_worksheet(title="VoteLog", rows=1000, cols=3)
+        ws.append_row(["Username", "Week", "Timestamp"])
+    records = ws.get_all_records()
+    if any(r.get("Username") == username and str(r.get("Week")) == str(week_number) for r in records):
+        return
+    ws.append_row([username, week_number, datetime.now(ET).strftime("%Y-%m-%d %H:%M:%S")])
+
+def get_consecutive_weeks(gc, username):
+    sh = open_sheet(gc)
+    if not sh:
+        return 0
+    try:
+        ws = sh.worksheet("VoteLog")
+        records = ws.get_all_records()
+    except Exception:
+        return 0
+    weeks = sorted({int(r["Week"]) for r in records if r.get("Username") == username and str(r.get("Week", "")).isdigit()})
+    if not weeks:
+        return 0
+    current = get_current_week_number()
+    streak = 1
+    for i in range(len(weeks) - 1, 0, -1):
+        if weeks[i] == weeks[i-1] + 1:
+            streak += 1
+        else:
+            break
+    last_voted = weeks[-1]
+    if last_voted < current - 1:
+        return 0
+    return streak
+
+def get_calculated_weight(consecutive):
+    if consecutive <= 0:
+        return 1.0
+    bonus = consecutive // 4
+    return float(min(5, 1 + bonus))
+
+def get_effective_weight(gc, username):
+    sh = open_sheet(gc)
+    if sh:
+        try:
+            weights_df = pd.DataFrame(sh.worksheet("Weights").get_all_records())
+            if not weights_df.empty and "Person" in weights_df.columns and username in weights_df["Person"].values:
+                return float(weights_df.loc[weights_df["Person"] == username, "Weight"].iloc[0])
+        except Exception:
+            pass
+    consecutive = get_consecutive_weeks(gc, username)
+    return get_calculated_weight(consecutive)
+
 def send_email(to_email: str, subject: str, body: str) -> bool:
     try:
         msg = MIMEMultipart()
@@ -204,7 +270,7 @@ def send_saturday_reminders(gc):
             body = (f"Hi {u.get('DisplayName', u.get('Username'))},\n\n"
                     f"Today (Saturday) is the last day to submit or update your rankings for Week {week}.\n\n"
                     f"Voting closes at 11:59 PM ET tonight.\n\n"
-                    f"https://agtop25.streamlit.app\n\n— AG Top 25")
+                    f"https://your-app-url.streamlit.app\n\n— AG Top 25")
             if send_email(email, subject, body):
                 sent += 1
     meta.update_acell("B2", str(week))
@@ -256,6 +322,7 @@ def save_submission(gc, person, ranking):
         else:
             ws.append_row(row_data)
         st.cache_data.clear()
+        log_vote(gc, person, get_current_week_number())
         return True
     except Exception as e:
         st.error(f"Save failed: {e}")
@@ -297,17 +364,11 @@ def load_results(_gc):
         df = pd.DataFrame(data)
         df["Timestamp"] = pd.to_datetime(df["Timestamp"])
         latest = df.sort_values("Timestamp").groupby("Person").tail(1)
-        try:
-            weights_df = pd.DataFrame(sh.worksheet("Weights").get_all_records())
-        except Exception:
-            weights_df = pd.DataFrame()
         points = defaultdict(float)
         firsts = defaultdict(float)
         for _, row in latest.iterrows():
             person = row["Person"]
-            w = 1.0
-            if not weights_df.empty and "Person" in weights_df.columns and person in weights_df["Person"].values:
-                w = float(weights_df.loc[weights_df["Person"] == person, "Weight"].iloc[0])
+            w = get_effective_weight(_gc, person)
             for pos in range(1, 26):
                 team = row.get(f"Rank{pos}")
                 if team:
@@ -522,6 +583,23 @@ with tab3:
         st.write(f"**Username:** {user.get('Username')}")
         st.write(f"**Email:** {user.get('Email') or '_(not set)_'}")
         st.write(f"**Member since:** {user.get('CreatedAt', '—')}")
+
+        consecutive = get_consecutive_weeks(gc, st.session_state.username)
+        weight = get_effective_weight(gc, st.session_state.username)
+        st.write(f"**Consecutive weeks voted:** {consecutive}")
+        st.write(f"**Current weight:** {weight:.0f}×")
+
+        st.divider()
+        st.subheader("Change Display Name")
+        new_display = st.text_input("New display name", value=user.get("DisplayName", ""), key="new_display")
+        if st.button("Update Display Name", key="update_display"):
+            if not new_display or not new_display.strip():
+                st.error("Display name cannot be empty.")
+            elif update_display_name(gc, st.session_state.username, new_display):
+                st.success("Display name updated.")
+                st.rerun()
+            else:
+                st.error("Failed to update display name.")
 
         st.divider()
         st.subheader("Change Password")
