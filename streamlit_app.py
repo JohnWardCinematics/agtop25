@@ -204,7 +204,7 @@ def send_saturday_reminders(gc):
             body = (f"Hi {u.get('DisplayName', u.get('Username'))},\n\n"
                     f"Today (Saturday) is the last day to submit or update your rankings for Week {week}.\n\n"
                     f"Voting closes at 11:59 PM ET tonight.\n\n"
-                    f"https://agtop25.streamlit.app\n\n— AG Top 25")
+                    f"https://your-app-url.streamlit.app\n\n— AG Top 25")
             if send_email(email, subject, body):
                 sent += 1
     meta.update_acell("B2", str(week))
@@ -306,7 +306,7 @@ def load_results(_gc):
         for _, row in latest.iterrows():
             person = row["Person"]
             w = 1.0
-            if not weights_df.empty and person in weights_df["Person"].values:
+            if not weights_df.empty and "Person" in weights_df.columns and person in weights_df["Person"].values:
                 w = float(weights_df.loc[weights_df["Person"] == person, "Weight"].iloc[0])
             for pos in range(1, 26):
                 team = row.get(f"Rank{pos}")
@@ -320,15 +320,14 @@ def load_results(_gc):
         st.error(f"Could not load results: {e}")
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)  # refresh every 5 minutes
+@st.cache_data(ttl=300)
 def load_teams(_gc):
     sh = open_sheet(_gc)
     if not sh:
         return []
     try:
         ws = sh.worksheet("Teams")
-        values = ws.col_values(1)  # column A
-        # skip header if the first cell is "Team" or similar
+        values = ws.col_values(1)
         teams = [v.strip() for v in values if v and v.strip() and v.strip().lower() != "team"]
         return teams
     except Exception as e:
@@ -414,7 +413,7 @@ if week_to_archive:
             st.rerun()
 
 teams = load_teams(gc)
-tab1, tab2 = st.tabs(["Submit Rankings", "Current Results"])
+tab1, tab2, tab3 = st.tabs(["Submit Rankings", "Current Results", "Account"])
 
 with tab1:
     if not is_open():
@@ -513,3 +512,36 @@ with tab2:
                 st.info("No other teams received votes.")
     else:
         st.info("No submissions yet (or sheet temporarily unavailable).")
+
+with tab3:
+    st.markdown("### Account Settings")
+    user = get_user_record(gc, st.session_state.username)
+    if not user:
+        st.error("Could not load account info.")
+    else:
+        st.write(f"**Username:** {user.get('Username')}")
+        st.write(f"**Email:** {user.get('Email') or '_(not set)_'}")
+        st.write(f"**Member since:** {user.get('CreatedAt', '—')}")
+
+        st.divider()
+        st.subheader("Change Password")
+
+        current = st.text_input("Current password", type="password", key="acct_current")
+        new1 = st.text_input("New password", type="password", key="acct_new1")
+        new2 = st.text_input("Confirm new password", type="password", key="acct_new2")
+
+        if st.button("Update Password", key="acct_update"):
+            if not current or not new1:
+                st.error("All fields required.")
+            elif new1 != new2:
+                st.error("New passwords do not match.")
+            elif len(new1) < 6:
+                st.error("Password must be at least 6 characters.")
+            elif hash_password(current) != user.get("PasswordHash"):
+                st.error("Current password is incorrect.")
+            else:
+                if update_password(gc, st.session_state.username, new1):
+                    st.success("Password updated successfully.")
+                    st.rerun()
+                else:
+                    st.error("Failed to update password.")
