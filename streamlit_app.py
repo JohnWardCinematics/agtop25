@@ -166,7 +166,7 @@ def update_display_name(gc, username: str, new_display_name: str) -> bool:
     if not ws: return False
     for i, r in enumerate(ws.get_all_records(), start=2):
         if r.get("Username", "").lower() == username.lower():
-            ws.update_cell(i, 5, new_display_name.strip())  # column E = DisplayName
+            ws.update_cell(i, 5, new_display_name.strip())
             st.cache_data.clear()
             return True
     return False
@@ -308,21 +308,21 @@ def archive_and_reset(gc, week_to_archive):
         st.error(f"Archive failed: {e}")
         return False
 
-def save_submission(gc, person, ranking):
+def save_submission(gc, username, ranking):
     sh = open_sheet(gc)
     if not sh: return False
     try:
         ws = sh.worksheet("Submissions")
         records = ws.get_all_records()
-        row_num = next((i for i, rec in enumerate(records, start=2) if rec.get("Person") == person), None)
+        row_num = next((i for i, rec in enumerate(records, start=2) if rec.get("Person") == username), None)
         timestamp = datetime.now(ET).strftime("%Y-%m-%d %H:%M:%S")
-        row_data = [timestamp, person] + ranking + [""] * (25 - len(ranking))
+        row_data = [timestamp, username] + ranking + [""] * (25 - len(ranking))
         if row_num:
             ws.update(f"A{row_num}:AA{row_num}", [row_data])
         else:
             ws.append_row(row_data)
         st.cache_data.clear()
-        log_vote(gc, person, get_current_week_number())
+        log_vote(gc, username, get_current_week_number())
         return True
     except Exception as e:
         st.error(f"Save failed: {e}")
@@ -340,12 +340,12 @@ def load_previous_aggregate(gc, week_number):
     except Exception:
         return []
 
-def load_user_previous_ranking(gc, person):
+def load_user_previous_ranking(gc, username):
     sh = open_sheet(gc)
     if not sh: return []
     try:
         ws = sh.worksheet("Submissions")
-        records = [r for r in ws.get_all_records() if r.get("Person") == person]
+        records = [r for r in ws.get_all_records() if r.get("Person") == username]
         if not records: return []
         records.sort(key=lambda r: r.get("Timestamp", ""), reverse=True)
         latest = records[0]
@@ -482,7 +482,7 @@ with tab1:
     else:
         st.info(f"Voting as: **{display_name}**")
         if "ranking" not in st.session_state:
-            own = load_user_previous_ranking(gc, display_name)
+            own = load_user_previous_ranking(gc, st.session_state.username)
             st.session_state.ranking = own if own else load_previous_aggregate(gc, week_number) or []
         if "show_remove" not in st.session_state: st.session_state.show_remove = False
         if "confirm_clear" not in st.session_state: st.session_state.confirm_clear = False
@@ -542,7 +542,7 @@ with tab1:
             has_25 = len(st.session_state.ranking) == 25
             if has_25:
                 if st.button("SUBMIT/UPDATE RANKINGS", type="primary", use_container_width=True, key="submit_btn"):
-                    if save_submission(gc, display_name, st.session_state.ranking):
+                    if save_submission(gc, st.session_state.username, st.session_state.ranking):
                         st.session_state.ranking = []
                         st.session_state.just_submitted = True
                         st.rerun()
