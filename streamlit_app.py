@@ -204,7 +204,7 @@ def send_saturday_reminders(gc):
             body = (f"Hi {u.get('DisplayName', u.get('Username'))},\n\n"
                     f"Today (Saturday) is the last day to submit or update your rankings for Week {week}.\n\n"
                     f"Voting closes at 11:59 PM ET tonight.\n\n"
-                    f"https://your-app-url.streamlit.app\n\n— AG Top 25")
+                    f"https://agtop25.streamlit.app\n\n— AG Top 25")
             if send_email(email, subject, body):
                 sent += 1
     meta.update_acell("B2", str(week))
