@@ -320,13 +320,19 @@ def load_results(_gc):
         st.error(f"Could not load results: {e}")
         return pd.DataFrame()
 
-@st.cache_data
-def load_teams():
+@st.cache_data(ttl=300)  # refresh every 5 minutes
+def load_teams(_gc):
+    sh = open_sheet(_gc)
+    if not sh:
+        return []
     try:
-        df = pd.read_csv("teams.csv")
-        return df["Team"].dropna().astype(str).str.strip().tolist()
+        ws = sh.worksheet("Teams")
+        values = ws.col_values(1)  # column A
+        # skip header if the first cell is "Team" or similar
+        teams = [v.strip() for v in values if v and v.strip() and v.strip().lower() != "team"]
+        return teams
     except Exception as e:
-        st.error(f"Could not load teams.csv: {e}")
+        st.error(f"Could not load teams from sheet: {e}")
         return []
 
 def get_display_name(username):
@@ -407,7 +413,7 @@ if week_to_archive:
             st.success(f"Week {week_to_archive} finalized. New week is ready.")
             st.rerun()
 
-teams = load_teams()
+teams = load_teams(gc)
 tab1, tab2 = st.tabs(["Submit Rankings", "Current Results"])
 
 with tab1:
