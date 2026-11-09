@@ -112,59 +112,80 @@ def open_sheet(gc):
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
+@st.cache_data(ttl=120)
+def get_users_records(_gc):
+    sh = open_sheet(_gc)
+    if not sh:
+        return []
+    try:
+        return sh.worksheet("Users").get_all_records()
+    except Exception:
+        return []
+
 def get_users_sheet(gc):
     sh = open_sheet(gc)
-    if not sh: return None
+    if not sh:
+        return None
     try:
         return sh.worksheet("Users")
     except Exception:
         ws = sh.add_worksheet(title="Users", rows=200, cols=5)
         ws.append_row(["Username", "PasswordHash", "Email", "CreatedAt", "DisplayName"])
+        st.cache_data.clear()
         return ws
 
 def user_exists(gc, username: str) -> bool:
-    ws = get_users_sheet(gc)
-    if not ws: return False
-    return any(r.get("Username", "").lower() == username.lower() for r in ws.get_all_records())
+    records = get_users_records(gc)
+    return any(r.get("Username", "").lower() == username.lower() for r in records)
 
 def create_user(gc, username: str, password: str, email: str) -> bool:
-    if user_exists(gc, username): return False
+    if user_exists(gc, username):
+        return False
     ws = get_users_sheet(gc)
-    if not ws: return False
-    ws.append_row([username.strip(), hash_password(password), email.strip().lower(),
-                   datetime.now(ET).strftime("%Y-%m-%d %H:%M:%S"), username.strip()])
+    if not ws:
+        return False
+    ws.append_row([
+        username.strip(),
+        hash_password(password),
+        email.strip().lower(),
+        datetime.now(ET).strftime("%Y-%m-%d %H:%M:%S"),
+        username.strip()
+    ])
     st.cache_data.clear()
     return True
 
 def verify_user(gc, username: str, password: str) -> bool:
-    ws = get_users_sheet(gc)
-    if not ws: return False
-    for r in ws.get_all_records():
+    records = get_users_records(gc)
+    for r in records:
         if r.get("Username", "").lower() == username.lower():
             return r.get("PasswordHash") == hash_password(password)
     return False
 
 def get_user_record(gc, username: str):
-    ws = get_users_sheet(gc)
-    if not ws: return None
-    for r in ws.get_all_records():
+    records = get_users_records(gc)
+    for r in records:
         if r.get("Username", "").lower() == username.lower():
             return r
     return None
 
 def update_password(gc, username: str, new_password: str) -> bool:
     ws = get_users_sheet(gc)
-    if not ws: return False
-    for i, r in enumerate(ws.get_all_records(), start=2):
+    if not ws:
+        return False
+    records = ws.get_all_records()
+    for i, r in enumerate(records, start=2):
         if r.get("Username", "").lower() == username.lower():
             ws.update_cell(i, 2, hash_password(new_password))
+            st.cache_data.clear()
             return True
     return False
 
 def update_display_name(gc, username: str, new_display_name: str) -> bool:
     ws = get_users_sheet(gc)
-    if not ws: return False
-    for i, r in enumerate(ws.get_all_records(), start=2):
+    if not ws:
+        return False
+    records = ws.get_all_records()
+    for i, r in enumerate(records, start=2):
         if r.get("Username", "").lower() == username.lower():
             ws.update_cell(i, 5, new_display_name.strip())
             st.cache_data.clear()
@@ -184,16 +205,20 @@ def log_vote(gc, username, week_number):
     if any(r.get("Username") == username and str(r.get("Week")) == str(week_number) for r in records):
         return
     ws.append_row([username, week_number, datetime.now(ET).strftime("%Y-%m-%d %H:%M:%S")])
+    st.cache_data.clear()
+
+@st.cache_data(ttl=180)
+def get_votelog_records(_gc):
+    sh = open_sheet(_gc)
+    if not sh:
+        return []
+    try:
+        return sh.worksheet("VoteLog").get_all_records()
+    except Exception:
+        return []
 
 def get_consecutive_weeks(gc, username):
-    sh = open_sheet(gc)
-    if not sh:
-        return 0
-    try:
-        ws = sh.worksheet("VoteLog")
-        records = ws.get_all_records()
-    except Exception:
-        return 0
+    records = get_votelog_records(gc)
     weeks = sorted({int(r["Week"]) for r in records if r.get("Username") == username and str(r.get("Week", "")).isdigit()})
     if not weeks:
         return 0
@@ -216,14 +241,6 @@ def get_calculated_weight(consecutive):
     return float(min(5, 1 + bonus))
 
 def get_effective_weight(gc, username):
-    sh = open_sheet(gc)
-    if sh:
-        try:
-            weights_df = pd.DataFrame(sh.worksheet("Weights").get_all_records())
-            if not weights_df.empty and "Person" in weights_df.columns and username in weights_df["Person"].values:
-                return float(weights_df.loc[weights_df["Person"] == username, "Weight"].iloc[0])
-        except Exception:
-            pass
     consecutive = get_consecutive_weeks(gc, username)
     return get_calculated_weight(consecutive)
 
@@ -246,10 +263,12 @@ def send_email(to_email: str, subject: str, body: str) -> bool:
 
 def send_saturday_reminders(gc):
     now = datetime.now(ET)
-    if now.weekday() != 5: return
+    if now.weekday() != 5:
+        return
     week = get_current_week_number()
     sh = open_sheet(gc)
-    if not sh: return
+    if not sh:
+        return
     try:
         meta = sh.worksheet("AppMeta")
         last = int(meta.acell("B2").value or 0)
@@ -258,12 +277,12 @@ def send_saturday_reminders(gc):
         meta.append_row(["Key", "Value"])
         meta.append_row(["LastReminderWeek", "0"])
         last = 0
-    if last >= week: return
+    if last >= week:
+        return
 
-    ws = get_users_sheet(gc)
-    if not ws: return
+    records = get_users_records(gc)
     sent = 0
-    for u in ws.get_all_records():
+    for u in records:
         email = u.get("Email", "").strip()
         if email:
             subject = f"Last day to vote — Week {week} of the AG Top 25"
@@ -276,21 +295,26 @@ def send_saturday_reminders(gc):
     meta.update_acell("B2", str(week))
 
 def should_archive_previous_week(gc, current_week):
-    if current_week <= 1: return None
+    if current_week <= 1:
+        return None
     prev = current_week - 1
     sh = open_sheet(gc)
-    if not sh: return None
-    if f"Week {prev} Results" not in [ws.title for ws in sh.worksheets()]:
+    if not sh:
+        return None
+    titles = [ws.title for ws in sh.worksheets()]
+    if f"Week {prev} Results" not in titles:
         return prev
     return None
 
 def archive_and_reset(gc, week_to_archive):
     sh = open_sheet(gc)
-    if not sh: return False
+    if not sh:
+        return False
     try:
         results = load_results(gc)
         tab_name = f"Week {week_to_archive} Results"
-        if tab_name not in [ws.title for ws in sh.worksheets()]:
+        titles = [ws.title for ws in sh.worksheets()]
+        if tab_name not in titles:
             new_ws = sh.add_worksheet(title=tab_name, rows=60, cols=5)
             rows = [["Rank", "Team", "Points", "First Place Votes"]]
             if not results.empty:
@@ -310,7 +334,8 @@ def archive_and_reset(gc, week_to_archive):
 
 def save_submission(gc, username, ranking):
     sh = open_sheet(gc)
-    if not sh: return False
+    if not sh:
+        return False
     try:
         ws = sh.worksheet("Submissions")
         records = ws.get_all_records()
@@ -329,9 +354,11 @@ def save_submission(gc, username, ranking):
         return False
 
 def load_previous_aggregate(gc, week_number):
-    if week_number <= 1: return []
+    if week_number <= 1:
+        return []
     sh = open_sheet(gc)
-    if not sh: return []
+    if not sh:
+        return []
     try:
         ws = sh.worksheet(f"Week {week_number - 1} Results")
         values = ws.get_all_values()
@@ -342,53 +369,95 @@ def load_previous_aggregate(gc, week_number):
 
 def load_user_previous_ranking(gc, username):
     sh = open_sheet(gc)
-    if not sh: return []
+    if not sh:
+        return []
     try:
         ws = sh.worksheet("Submissions")
         records = [r for r in ws.get_all_records() if r.get("Person") == username]
-        if not records: return []
+        if not records:
+            return []
         records.sort(key=lambda r: r.get("Timestamp", ""), reverse=True)
         latest = records[0]
         return [latest.get(f"Rank{i}") for i in range(1, 26) if latest.get(f"Rank{i}")]
     except Exception:
         return []
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=90)
 def load_results(_gc):
     sh = open_sheet(_gc)
-    if not sh: return pd.DataFrame()
+    if not sh:
+        return pd.DataFrame()
     try:
-        ws = sh.worksheet("Submissions")
-        data = ws.get_all_records()
-        if not data: return pd.DataFrame()
-        df = pd.DataFrame(data)
+        submissions = sh.worksheet("Submissions").get_all_records()
+        if not submissions:
+            return pd.DataFrame()
+
+        try:
+            weights_df = pd.DataFrame(sh.worksheet("Weights").get_all_records())
+        except Exception:
+            weights_df = pd.DataFrame()
+
+        votelog = get_votelog_records(_gc)
+
+        df = pd.DataFrame(submissions)
         df["Timestamp"] = pd.to_datetime(df["Timestamp"])
         latest = df.sort_values("Timestamp").groupby("Person").tail(1)
+
         points = defaultdict(float)
         firsts = defaultdict(float)
+
+        current_week = get_current_week_number()
+
         for _, row in latest.iterrows():
             person = row["Person"]
-            w = get_effective_weight(_gc, person)
+            w = 1.0
+
+            # Prefer explicit weight from Weights sheet
+            if not weights_df.empty and "Person" in weights_df.columns and person in weights_df["Person"].values:
+                w = float(weights_df.loc[weights_df["Person"] == person, "Weight"].iloc[0])
+            else:
+                # Calculate from VoteLog in memory
+                weeks = sorted({
+                    int(r["Week"]) for r in votelog
+                    if r.get("Username") == person and str(r.get("Week", "")).isdigit()
+                })
+                if weeks:
+                    streak = 1
+                    for i in range(len(weeks) - 1, 0, -1):
+                        if weeks[i] == weeks[i - 1] + 1:
+                            streak += 1
+                        else:
+                            break
+                    last_voted = weeks[-1]
+                    if last_voted >= current_week - 1:
+                        bonus = streak // 4
+                        w = float(min(5, 1 + bonus))
+
             for pos in range(1, 26):
                 team = row.get(f"Rank{pos}")
                 if team:
                     points[team] += (26 - pos) * w
-                    if pos == 1: firsts[team] += w
-        results = [{"Team": t, "Points": int(round(p)), "First Place Votes": int(round(firsts[t]))} for t, p in points.items()]
+                    if pos == 1:
+                        firsts[team] += w
+
+        results = [
+            {"Team": t, "Points": int(round(p)), "First Place Votes": int(round(firsts[t]))}
+            for t, p in points.items()
+        ]
         results.sort(key=lambda x: (-x["Points"], -x["First Place Votes"]))
         return pd.DataFrame(results)
+
     except Exception as e:
         st.error(f"Could not load results: {e}")
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=600)
 def load_teams(_gc):
     sh = open_sheet(_gc)
     if not sh:
         return []
     try:
-        ws = sh.worksheet("Teams")
-        values = ws.col_values(1)
+        values = sh.worksheet("Teams").col_values(1)
         teams = [v.strip() for v in values if v and v.strip() and v.strip().lower() != "team"]
         return teams
     except Exception as e:
@@ -397,7 +466,8 @@ def load_teams(_gc):
 
 def get_display_name(username):
     display_names = st.secrets.get("display_names", {})
-    if username in display_names: return display_names[username]
+    if username in display_names:
+        return display_names[username]
     gc = get_gsheet_client()
     rec = get_user_record(gc, username)
     return rec.get("DisplayName", username) if rec else username
@@ -464,14 +534,20 @@ st.markdown(f"<div style='text-align: left; margin-top: 1.1rem; font-size: 0.95r
 st.title(f"Associated Goys Top 25 Poll | Week {week_number} | {date_range}")
 
 gc = get_gsheet_client()
-send_saturday_reminders(gc)
 
-week_to_archive = should_archive_previous_week(gc, week_number)
-if week_to_archive:
-    with st.spinner(f"Finalizing Week {week_to_archive}..."):
-        if archive_and_reset(gc, week_to_archive):
-            st.success(f"Week {week_to_archive} finalized. New week is ready.")
-            st.rerun()
+# Run maintenance less aggressively
+if "last_maintenance" not in st.session_state:
+    st.session_state.last_maintenance = datetime.min.replace(tzinfo=ET)
+
+if (datetime.now(ET) - st.session_state.last_maintenance).total_seconds() > 300:
+    send_saturday_reminders(gc)
+    week_to_archive = should_archive_previous_week(gc, week_number)
+    if week_to_archive:
+        with st.spinner(f"Finalizing Week {week_to_archive}..."):
+            if archive_and_reset(gc, week_to_archive):
+                st.success(f"Week {week_to_archive} finalized. New week is ready.")
+                st.rerun()
+    st.session_state.last_maintenance = datetime.now(ET)
 
 teams = load_teams(gc)
 tab1, tab2, tab3 = st.tabs(["Submit Rankings", "Current Results", "Account"])
@@ -482,7 +558,6 @@ with tab1:
     else:
         st.info(f"Voting as: **{display_name}**")
 
-        # Pre-populate: own submission if they already voted this week, otherwise previous week aggregate
         if "ranking" not in st.session_state or not st.session_state.get("ranking"):
             own = load_user_previous_ranking(gc, st.session_state.username)
             if own:
@@ -490,8 +565,10 @@ with tab1:
             else:
                 st.session_state.ranking = load_previous_aggregate(gc, week_number) or []
 
-        if "show_remove" not in st.session_state: st.session_state.show_remove = False
-        if "confirm_clear" not in st.session_state: st.session_state.confirm_clear = False
+        if "show_remove" not in st.session_state:
+            st.session_state.show_remove = False
+        if "confirm_clear" not in st.session_state:
+            st.session_state.confirm_clear = False
 
         col_left, col_center, col_right = st.columns([1, 2, 1])
         with col_left:
@@ -510,8 +587,12 @@ with tab1:
                 numbers_html = '<div class="rank-numbers">' + ''.join(f'<div>{i}.</div>' for i in range(1, 26)) + '</div>'
                 st.markdown(numbers_html, unsafe_allow_html=True)
             with sort_col:
-                center_result = sort_items(st.session_state.ranking, direction="vertical",
-                                          key=f"ranking_{len(st.session_state.ranking)}", custom_style=CENTER_STYLE)
+                center_result = sort_items(
+                    st.session_state.ranking,
+                    direction="vertical",
+                    key=f"ranking_{len(st.session_state.ranking)}",
+                    custom_style=CENTER_STYLE
+                )
                 if center_result != st.session_state.ranking:
                     st.session_state.ranking = center_result
                     st.rerun()
@@ -538,8 +619,13 @@ with tab1:
                 st.session_state.show_remove = not st.session_state.show_remove
                 st.rerun()
             if st.session_state.show_remove and st.session_state.ranking:
-                to_remove = st.selectbox("Select team to remove", options=[""] + st.session_state.ranking,
-                                         index=0, key="remove_select", label_visibility="collapsed")
+                to_remove = st.selectbox(
+                    "Select team to remove",
+                    options=[""] + st.session_state.ranking,
+                    index=0,
+                    key="remove_select",
+                    label_visibility="collapsed"
+                )
                 if to_remove and st.button("Confirm Remove", key="confirm_remove", use_container_width=True):
                     st.session_state.ranking.remove(to_remove)
                     st.session_state.show_remove = False
@@ -549,7 +635,6 @@ with tab1:
             if has_25:
                 if st.button("SUBMIT/UPDATE RANKINGS", type="primary", use_container_width=True, key="submit_btn"):
                     if save_submission(gc, st.session_state.username, st.session_state.ranking):
-                        # Keep the ranking they just submitted so the center stays populated
                         st.session_state.just_submitted = True
                         st.rerun()
             else:
@@ -560,9 +645,11 @@ with tab1:
 
 with tab2:
     header_col, refresh_col = st.columns([3, 1])
-    with header_col: st.markdown("**Weighted Aggregate Results**")
+    with header_col:
+        st.markdown("**Weighted Aggregate Results**")
     with refresh_col:
-        if st.button("Refresh Results", use_container_width=True): st.cache_data.clear()
+        if st.button("Refresh Results", use_container_width=True):
+            st.cache_data.clear()
     results = load_results(gc)
     if not results.empty:
         top25 = results.head(25).copy()
