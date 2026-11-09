@@ -481,9 +481,15 @@ with tab1:
         st.error("Submissions are closed. Voting reopens Monday at midnight ET (cutoff Saturday 11:59 PM ET).")
     else:
         st.info(f"Voting as: **{display_name}**")
-        if "ranking" not in st.session_state:
+
+        # Pre-populate: own submission if they already voted this week, otherwise previous week aggregate
+        if "ranking" not in st.session_state or not st.session_state.get("ranking"):
             own = load_user_previous_ranking(gc, st.session_state.username)
-            st.session_state.ranking = own if own else load_previous_aggregate(gc, week_number) or []
+            if own:
+                st.session_state.ranking = own
+            else:
+                st.session_state.ranking = load_previous_aggregate(gc, week_number) or []
+
         if "show_remove" not in st.session_state: st.session_state.show_remove = False
         if "confirm_clear" not in st.session_state: st.session_state.confirm_clear = False
 
@@ -543,7 +549,7 @@ with tab1:
             if has_25:
                 if st.button("SUBMIT/UPDATE RANKINGS", type="primary", use_container_width=True, key="submit_btn"):
                     if save_submission(gc, st.session_state.username, st.session_state.ranking):
-                        st.session_state.ranking = []
+                        # Keep the ranking they just submitted so the center stays populated
                         st.session_state.just_submitted = True
                         st.rerun()
             else:
