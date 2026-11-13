@@ -241,6 +241,25 @@ def get_calculated_weight(consecutive):
     return float(min(5, 1 + bonus))
 
 def get_effective_weight(gc, username):
+    sh = open_sheet(gc)
+    if sh:
+        try:
+            ws = sh.worksheet("Weights")
+            records = ws.get_all_records()
+            if records:
+                df = pd.DataFrame(records)
+                # Normalize column names
+                df.columns = [c.strip() for c in df.columns]
+                person_col = next((c for c in df.columns if c.lower() in ("person", "username", "name")), None)
+                weight_col = next((c for c in df.columns if c.lower() in ("weight", "weights")), None)
+                if person_col and weight_col:
+                    # Clean the data
+                    df[person_col] = df[person_col].astype(str).str.strip().str.lower()
+                    match = df[df[person_col] == username.strip().lower()]
+                    if not match.empty:
+                        return float(match[weight_col].iloc[0])
+        except Exception as e:
+            print(f"Weight lookup error: {e}")  # will show in Streamlit logs
     consecutive = get_consecutive_weeks(gc, username)
     return get_calculated_weight(consecutive)
 
