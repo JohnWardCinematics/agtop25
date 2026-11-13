@@ -10,6 +10,9 @@ import hashlib
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import time
+import random
+from gspread.exceptions import APIError
 
 st.set_page_config(page_title="Associated Goys Top 25 Poll", layout="wide")
 
@@ -96,129 +99,130 @@ def is_open():
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 
+def with_backoff(func, max_retries=5):
+    for attempt in range(max_retries):
+        try:
+            return func()
+        except APIError as e:
+            if "429" in str(e) or "Quota exceeded" in str(e):
+                wait = (2 ** attempt) + random.uniform(0, 1)
+                time.sleep(min(wait, 32))
+                continue
+            raise
+    raise Exception("Max retries exceeded after quota errors")
+
 @st.cache_resource
 def get_gsheet_client():
     creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=SCOPES)
     return gspread.authorize(creds)
 
-def open_sheet(gc):
-    try:
-        return gc.open_by_url(st.secrets["gsheets"]["spreadsheet_url"])
-    except Exception as e:
-        st.error(f"Could not open Google Sheet: {type(e).__name__}")
-        st.code(str(e))
-        return None
+@st.cache_resource
+def get_spreadsheet():
+    gc = get_gsheet_client()
+    return with_backoff(lambda: gc.open_by_url(st.secrets["gsheets"]["spreadsheet_url"]))
 
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
-@st.cache_data(ttl=120)
-def get_users_records(_gc):
-    sh = open_sheet(_gc)
-    if not sh:
-        return []
+@st.cache_data(ttl=300)
+def get_users_records(_gc=None):
+    sh = get_spreadsheet()
     try:
-        return sh.worksheet("Users").get_all_records()
+        return with_backoff(lambda: sh.worksheet("Users").get_all_records())
     except Exception:
         return []
 
-def get_users_sheet(gc):
-    sh = open_sheet(gc)
-    if not sh:
-        return None
+def get_users_sheet():
+    sh = get_spreadsheet()
     try:
-        return sh.worksheet("Users")
+        return with_backoff(lambda: sh.worksheet("Users"))
     except Exception:
-        ws = sh.add_worksheet(title="Users", rows=200, cols=5)
-        ws.append_row(["Username", "PasswordHash", "Email", "CreatedAt", "DisplayName"])
+        ws = with_backoff(lambda: sh.add_worksheet(title="Users", rows=200, cols=5))
+        with_backoff(lambda: ws.append_row(["Username", "PasswordHash", "Email", "CreatedAt", "DisplayName"]))
         st.cache_data.clear()
         return ws
 
-def user_exists(gc, username: str) -> bool:
-    records = get_users_records(gc)
+def user_exists(username: str) -> bool:
+    records = get_users_records()
     return any(r.get("Username", "").lower() == username.lower() for r in records)
 
-def create_user(gc, username: str, password: str, email: str) -> bool:
-    if user_exists(gc, username):
+def create_user(username: str, password: str, email: str) -> bool:
+    if user_exists(username):
         return False
-    ws = get_users_sheet(gc)
+    ws = get_users_sheet()
     if not ws:
         return False
-    ws.append_row([
+    with_backoff(lambda: ws.append_row([
         username.strip(),
         hash_password(password),
         email.strip().lower(),
         datetime.now(ET).strftime("%Y-%m-%d %H:%M:%S"),
         username.strip()
-    ])
+    ]))
     st.cache_data.clear()
     return True
 
-def verify_user(gc, username: str, password: str) -> bool:
-    records = get_users_records(gc)
+def verify_user(username: str, password: str) -> bool:
+    records = get_users_records()
     for r in records:
         if r.get("Username", "").lower() == username.lower():
             return r.get("PasswordHash") == hash_password(password)
     return False
 
-def get_user_record(gc, username: str):
-    records = get_users_records(gc)
+def get_user_record(username: str):
+    records = get_users_records()
     for r in records:
         if r.get("Username", "").lower() == username.lower():
             return r
     return None
 
-def update_password(gc, username: str, new_password: str) -> bool:
-    ws = get_users_sheet(gc)
+def update_password(username: str, new_password: str) -> bool:
+    ws = get_users_sheet()
     if not ws:
         return False
-    records = ws.get_all_records()
+    records = with_backoff(lambda: ws.get_all_records())
     for i, r in enumerate(records, start=2):
         if r.get("Username", "").lower() == username.lower():
-            ws.update_cell(i, 2, hash_password(new_password))
+            with_backoff(lambda: ws.update_cell(i, 2, hash_password(new_password)))
             st.cache_data.clear()
             return True
     return False
 
-def update_display_name(gc, username: str, new_display_name: str) -> bool:
-    ws = get_users_sheet(gc)
+def update_display_name(username: str, new_display_name: str) -> bool:
+    ws = get_users_sheet()
     if not ws:
         return False
-    records = ws.get_all_records()
+    records = with_backoff(lambda: ws.get_all_records())
     for i, r in enumerate(records, start=2):
         if r.get("Username", "").lower() == username.lower():
-            ws.update_cell(i, 5, new_display_name.strip())
+            with_backoff(lambda: ws.update_cell(i, 5, new_display_name.strip()))
             st.cache_data.clear()
             return True
     return False
 
-def log_vote(gc, username, week_number):
-    sh = open_sheet(gc)
-    if not sh:
-        return
+def log_vote(username, week_number):
+    sh = get_spreadsheet()
     try:
-        ws = sh.worksheet("VoteLog")
+        ws = with_backoff(lambda: sh.worksheet("VoteLog"))
     except Exception:
-        ws = sh.add_worksheet(title="VoteLog", rows=1000, cols=3)
-        ws.append_row(["Username", "Week", "Timestamp"])
-    records = ws.get_all_records()
+        ws = with_backoff(lambda: sh.add_worksheet(title="VoteLog", rows=1000, cols=3))
+        with_backoff(lambda: ws.append_row(["Username", "Week", "Timestamp"]))
+    records = with_backoff(lambda: ws.get_all_records())
     if any(r.get("Username") == username and str(r.get("Week")) == str(week_number) for r in records):
         return
-    ws.append_row([username, week_number, datetime.now(ET).strftime("%Y-%m-%d %H:%M:%S")])
+    with_backoff(lambda: ws.append_row([username, week_number, datetime.now(ET).strftime("%Y-%m-%d %H:%M:%S")]))
     st.cache_data.clear()
 
-@st.cache_data(ttl=180)
-def get_votelog_records(_gc):
-    sh = open_sheet(_gc)
-    if not sh:
-        return []
+@st.cache_data(ttl=300)
+def get_votelog_records(_gc=None):
+    sh = get_spreadsheet()
     try:
-        return sh.worksheet("VoteLog").get_all_records()
+        return with_backoff(lambda: sh.worksheet("VoteLog").get_all_records())
     except Exception:
         return []
 
-def get_consecutive_weeks(gc, username):
-    records = get_votelog_records(gc)
+def get_consecutive_weeks(username):
+    records = get_votelog_records()
     weeks = sorted({int(r["Week"]) for r in records if r.get("Username") == username and str(r.get("Week", "")).isdigit()})
     if not weeks:
         return 0
@@ -240,27 +244,24 @@ def get_calculated_weight(consecutive):
     bonus = consecutive // 4
     return float(min(5, 1 + bonus))
 
-def get_effective_weight(gc, username):
-    sh = open_sheet(gc)
-    if sh:
-        try:
-            ws = sh.worksheet("Weights")
-            records = ws.get_all_records()
-            if records:
-                df = pd.DataFrame(records)
-                # Normalize column names
-                df.columns = [c.strip() for c in df.columns]
-                person_col = next((c for c in df.columns if c.lower() in ("person", "username", "name")), None)
-                weight_col = next((c for c in df.columns if c.lower() in ("weight", "weights")), None)
-                if person_col and weight_col:
-                    # Clean the data
-                    df[person_col] = df[person_col].astype(str).str.strip().str.lower()
-                    match = df[df[person_col] == username.strip().lower()]
-                    if not match.empty:
-                        return float(match[weight_col].iloc[0])
-        except Exception as e:
-            print(f"Weight lookup error: {e}")  # will show in Streamlit logs
-    consecutive = get_consecutive_weeks(gc, username)
+def get_effective_weight(username):
+    sh = get_spreadsheet()
+    try:
+        ws = with_backoff(lambda: sh.worksheet("Weights"))
+        records = with_backoff(lambda: ws.get_all_records())
+        if records:
+            df = pd.DataFrame(records)
+            df.columns = [c.strip() for c in df.columns]
+            person_col = next((c for c in df.columns if c.lower() in ("person", "username", "name")), None)
+            weight_col = next((c for c in df.columns if c.lower() in ("weight", "weights")), None)
+            if person_col and weight_col:
+                df[person_col] = df[person_col].astype(str).str.strip().str.lower()
+                match = df[df[person_col] == username.strip().lower()]
+                if not match.empty:
+                    return float(match[weight_col].iloc[0])
+    except Exception:
+        pass
+    consecutive = get_consecutive_weeks(username)
     return get_calculated_weight(consecutive)
 
 def send_email(to_email: str, subject: str, body: str) -> bool:
@@ -280,26 +281,24 @@ def send_email(to_email: str, subject: str, body: str) -> bool:
         print(f"Email error: {e}")
         return False
 
-def send_saturday_reminders(gc):
+def send_saturday_reminders():
     now = datetime.now(ET)
     if now.weekday() != 5:
         return
     week = get_current_week_number()
-    sh = open_sheet(gc)
-    if not sh:
-        return
+    sh = get_spreadsheet()
     try:
-        meta = sh.worksheet("AppMeta")
-        last = int(meta.acell("B2").value or 0)
+        meta = with_backoff(lambda: sh.worksheet("AppMeta"))
+        last = int(with_backoff(lambda: meta.acell("B2").value) or 0)
     except Exception:
-        meta = sh.add_worksheet(title="AppMeta", rows=5, cols=2)
-        meta.append_row(["Key", "Value"])
-        meta.append_row(["LastReminderWeek", "0"])
+        meta = with_backoff(lambda: sh.add_worksheet(title="AppMeta", rows=5, cols=2))
+        with_backoff(lambda: meta.append_row(["Key", "Value"]))
+        with_backoff(lambda: meta.append_row(["LastReminderWeek", "0"]))
         last = 0
     if last >= week:
         return
 
-    records = get_users_records(gc)
+    records = get_users_records()
     sent = 0
     for u in records:
         email = u.get("Email", "").strip()
@@ -311,88 +310,78 @@ def send_saturday_reminders(gc):
                     f"https://your-app-url.streamlit.app\n\n— AG Top 25")
             if send_email(email, subject, body):
                 sent += 1
-    meta.update_acell("B2", str(week))
+    with_backoff(lambda: meta.update_acell("B2", str(week)))
 
-def should_archive_previous_week(gc, current_week):
+def should_archive_previous_week(current_week):
     if current_week <= 1:
         return None
     prev = current_week - 1
-    sh = open_sheet(gc)
-    if not sh:
-        return None
-    titles = [ws.title for ws in sh.worksheets()]
+    sh = get_spreadsheet()
+    titles = [ws.title for ws in with_backoff(lambda: sh.worksheets())]
     if f"Week {prev} Results" not in titles:
         return prev
     return None
 
-def archive_and_reset(gc, week_to_archive):
-    sh = open_sheet(gc)
-    if not sh:
-        return False
+def archive_and_reset(week_to_archive):
+    sh = get_spreadsheet()
     try:
-        results = load_results(gc)
+        results = load_results()
         tab_name = f"Week {week_to_archive} Results"
-        titles = [ws.title for ws in sh.worksheets()]
+        titles = [ws.title for ws in with_backoff(lambda: sh.worksheets())]
         if tab_name not in titles:
-            new_ws = sh.add_worksheet(title=tab_name, rows=60, cols=5)
+            new_ws = with_backoff(lambda: sh.add_worksheet(title=tab_name, rows=60, cols=5))
             rows = [["Rank", "Team", "Points", "First Place Votes"]]
             if not results.empty:
                 for i, row in results.head(50).iterrows():
                     rows.append([i + 1, row["Team"], int(row["Points"]), int(row["First Place Votes"])])
             else:
                 rows.append(["", "(No submissions)", "", ""])
-            new_ws.update("A1", rows)
-        ws = sh.worksheet("Submissions")
+            with_backoff(lambda: new_ws.update("A1", rows))
+        ws = with_backoff(lambda: sh.worksheet("Submissions"))
         if ws.row_count > 1:
-            ws.batch_clear(["A2:AA1000"])
+            with_backoff(lambda: ws.batch_clear(["A2:AA1000"]))
         st.cache_data.clear()
         return True
     except Exception as e:
         st.error(f"Archive failed: {e}")
         return False
 
-def save_submission(gc, username, ranking):
-    sh = open_sheet(gc)
-    if not sh:
-        return False
+def save_submission(username, ranking):
+    sh = get_spreadsheet()
     try:
-        ws = sh.worksheet("Submissions")
-        records = ws.get_all_records()
+        ws = with_backoff(lambda: sh.worksheet("Submissions"))
+        records = with_backoff(lambda: ws.get_all_records())
         row_num = next((i for i, rec in enumerate(records, start=2) if rec.get("Person") == username), None)
         timestamp = datetime.now(ET).strftime("%Y-%m-%d %H:%M:%S")
         row_data = [timestamp, username] + ranking + [""] * (25 - len(ranking))
         if row_num:
-            ws.update(f"A{row_num}:AA{row_num}", [row_data])
+            with_backoff(lambda: ws.update(f"A{row_num}:AA{row_num}", [row_data]))
         else:
-            ws.append_row(row_data)
+            with_backoff(lambda: ws.append_row(row_data))
         st.cache_data.clear()
-        log_vote(gc, username, get_current_week_number())
+        log_vote(username, get_current_week_number())
         return True
     except Exception as e:
         st.error(f"Save failed: {e}")
         return False
 
-def load_previous_aggregate(gc, week_number):
+def load_previous_aggregate(week_number):
     if week_number <= 1:
         return []
-    sh = open_sheet(gc)
-    if not sh:
-        return []
+    sh = get_spreadsheet()
     try:
-        ws = sh.worksheet(f"Week {week_number - 1} Results")
-        values = ws.get_all_values()
+        ws = with_backoff(lambda: sh.worksheet(f"Week {week_number - 1} Results"))
+        values = with_backoff(lambda: ws.get_all_values())
         teams = [row[1].strip() for row in values[1:] if len(row) > 1 and row[1].strip() and not row[1].startswith("(")]
         return teams[:25]
     except Exception:
         return []
 
-def load_user_previous_ranking(gc, username):
-    sh = open_sheet(gc)
-    if not sh:
-        return []
+def load_user_previous_ranking(username):
+    sh = get_spreadsheet()
     try:
-        ws = sh.worksheet("Submissions")
-        records = [r for r in ws.get_all_records() if r.get("Person") == username]
+        ws = with_backoff(lambda: sh.worksheet("Submissions"))
+        records = [r for r in with_backoff(lambda: ws.get_all_records()) if r.get("Person") == username]
         if not records:
             return []
         records.sort(key=lambda r: r.get("Timestamp", ""), reverse=True)
@@ -401,22 +390,21 @@ def load_user_previous_ranking(gc, username):
     except Exception:
         return []
 
-@st.cache_data(ttl=90)
-def load_results(_gc):
-    sh = open_sheet(_gc)
-    if not sh:
-        return pd.DataFrame()
+@st.cache_data(ttl=180)
+def load_results(_gc=None):
+    sh = get_spreadsheet()
     try:
-        submissions = sh.worksheet("Submissions").get_all_records()
+        submissions = with_backoff(lambda: sh.worksheet("Submissions").get_all_records())
         if not submissions:
             return pd.DataFrame()
 
         try:
-            weights_df = pd.DataFrame(sh.worksheet("Weights").get_all_records())
+            weights_records = with_backoff(lambda: sh.worksheet("Weights").get_all_records())
+            weights_df = pd.DataFrame(weights_records)
         except Exception:
             weights_df = pd.DataFrame()
 
-        votelog = get_votelog_records(_gc)
+        votelog = get_votelog_records()
 
         df = pd.DataFrame(submissions)
         df["Timestamp"] = pd.to_datetime(df["Timestamp"])
@@ -431,11 +419,9 @@ def load_results(_gc):
             person = row["Person"]
             w = 1.0
 
-            # Prefer explicit weight from Weights sheet
             if not weights_df.empty and "Person" in weights_df.columns and person in weights_df["Person"].values:
                 w = float(weights_df.loc[weights_df["Person"] == person, "Weight"].iloc[0])
             else:
-                # Calculate from VoteLog in memory
                 weeks = sorted({
                     int(r["Week"]) for r in votelog
                     if r.get("Username") == person and str(r.get("Week", "")).isdigit()
@@ -471,12 +457,10 @@ def load_results(_gc):
         return pd.DataFrame()
 
 @st.cache_data(ttl=600)
-def load_teams(_gc):
-    sh = open_sheet(_gc)
-    if not sh:
-        return []
+def load_teams(_gc=None):
+    sh = get_spreadsheet()
     try:
-        values = sh.worksheet("Teams").col_values(1)
+        values = with_backoff(lambda: sh.worksheet("Teams").col_values(1))
         teams = [v.strip() for v in values if v and v.strip() and v.strip().lower() != "team"]
         return teams
     except Exception as e:
@@ -487,8 +471,7 @@ def get_display_name(username):
     display_names = st.secrets.get("display_names", {})
     if username in display_names:
         return display_names[username]
-    gc = get_gsheet_client()
-    rec = get_user_record(gc, username)
+    rec = get_user_record(username)
     return rec.get("DisplayName", username) if rec else username
 
 def check_login():
@@ -502,8 +485,7 @@ def check_login():
             username = st.text_input("Username", key="login_user")
             password = st.text_input("Password", type="password", key="login_pass")
             if st.button("Log In", key="login_btn"):
-                gc = get_gsheet_client()
-                if verify_user(gc, username, password):
+                if verify_user(username, password):
                     st.session_state.authenticated = True
                     st.session_state.username = username
                     st.rerun()
@@ -522,10 +504,9 @@ def check_login():
                 elif len(new_pass) < 6:
                     st.error("Password must be at least 6 characters.")
                 else:
-                    gc = get_gsheet_client()
-                    if user_exists(gc, new_user):
+                    if user_exists(new_user):
                         st.error("Username taken.")
-                    elif create_user(gc, new_user, new_pass, new_email):
+                    elif create_user(new_user, new_pass, new_email):
                         st.success("Account created! You can now log in.")
                     else:
                         st.error("Could not create account.")
@@ -552,23 +533,21 @@ date_range = format_date_range()
 st.markdown(f"<div style='text-align: left; margin-top: 1.1rem; font-size: 0.95rem; color: #aaaaaa; position: absolute;'>Logged in as: {display_name}</div>", unsafe_allow_html=True)
 st.title(f"Associated Goys Top 25 Poll | Week {week_number} | {date_range}")
 
-gc = get_gsheet_client()
-
 # Run maintenance less aggressively
 if "last_maintenance" not in st.session_state:
     st.session_state.last_maintenance = datetime.min.replace(tzinfo=ET)
 
 if (datetime.now(ET) - st.session_state.last_maintenance).total_seconds() > 300:
-    send_saturday_reminders(gc)
-    week_to_archive = should_archive_previous_week(gc, week_number)
+    send_saturday_reminders()
+    week_to_archive = should_archive_previous_week(week_number)
     if week_to_archive:
         with st.spinner(f"Finalizing Week {week_to_archive}..."):
-            if archive_and_reset(gc, week_to_archive):
+            if archive_and_reset(week_to_archive):
                 st.success(f"Week {week_to_archive} finalized. New week is ready.")
                 st.rerun()
     st.session_state.last_maintenance = datetime.now(ET)
 
-teams = load_teams(gc)
+teams = load_teams()
 tab1, tab2, tab3 = st.tabs(["Submit Rankings", "Current Results", "Account"])
 
 with tab1:
@@ -578,11 +557,11 @@ with tab1:
         st.info(f"Voting as: **{display_name}**")
 
         if "ranking" not in st.session_state or not st.session_state.get("ranking"):
-            own = load_user_previous_ranking(gc, st.session_state.username)
+            own = load_user_previous_ranking(st.session_state.username)
             if own:
                 st.session_state.ranking = own
             else:
-                st.session_state.ranking = load_previous_aggregate(gc, week_number) or []
+                st.session_state.ranking = load_previous_aggregate(week_number) or []
 
         if "show_remove" not in st.session_state:
             st.session_state.show_remove = False
@@ -653,7 +632,7 @@ with tab1:
             has_25 = len(st.session_state.ranking) == 25
             if has_25:
                 if st.button("SUBMIT/UPDATE RANKINGS", type="primary", use_container_width=True, key="submit_btn"):
-                    if save_submission(gc, st.session_state.username, st.session_state.ranking):
+                    if save_submission(st.session_state.username, st.session_state.ranking):
                         st.session_state.just_submitted = True
                         st.rerun()
             else:
@@ -669,7 +648,7 @@ with tab2:
     with refresh_col:
         if st.button("Refresh Results", use_container_width=True):
             st.cache_data.clear()
-    results = load_results(gc)
+    results = load_results()
     if not results.empty:
         top25 = results.head(25).copy()
         others = results.iloc[25:].copy()
@@ -688,7 +667,7 @@ with tab2:
 
 with tab3:
     st.markdown("### Account Settings")
-    user = get_user_record(gc, st.session_state.username)
+    user = get_user_record(st.session_state.username)
     if not user:
         st.error("Could not load account info.")
     else:
@@ -696,8 +675,8 @@ with tab3:
         st.write(f"**Email:** {user.get('Email') or '_(not set)_'}")
         st.write(f"**Member since:** {user.get('CreatedAt', '—')}")
 
-        consecutive = get_consecutive_weeks(gc, st.session_state.username)
-        weight = get_effective_weight(gc, st.session_state.username)
+        consecutive = get_consecutive_weeks(st.session_state.username)
+        weight = get_effective_weight(st.session_state.username)
         st.write(f"**Consecutive weeks voted:** {consecutive}")
         st.write(f"**Current weight:** {weight:.0f}×")
 
@@ -707,7 +686,7 @@ with tab3:
         if st.button("Update Display Name", key="update_display"):
             if not new_display or not new_display.strip():
                 st.error("Display name cannot be empty.")
-            elif update_display_name(gc, st.session_state.username, new_display):
+            elif update_display_name(st.session_state.username, new_display):
                 st.success("Display name updated.")
                 st.rerun()
             else:
@@ -730,7 +709,7 @@ with tab3:
             elif hash_password(current) != user.get("PasswordHash"):
                 st.error("Current password is incorrect.")
             else:
-                if update_password(gc, st.session_state.username, new1):
+                if update_password(st.session_state.username, new1):
                     st.success("Password updated successfully.")
                     st.rerun()
                 else:
