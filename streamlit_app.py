@@ -566,7 +566,7 @@ if (datetime.now(ET) - st.session_state.last_maintenance).total_seconds() > 300:
     st.session_state.last_maintenance = datetime.now(ET)
 
 teams = load_teams()
-tab1, tab2, tab3 = st.tabs(["Submit Rankings", "Current Results", "Account"])
+tab1, tab2, tab3, tab4 = st.tabs(["Submit Rankings", "Current Results", "Account", "Instructions"])
 
 with tab1:
     if not is_open():
