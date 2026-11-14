@@ -35,6 +35,14 @@ st.markdown("""
         font-weight: 700 !important; width: 100% !important; font-family: 'Bebas Neue', sans-serif !important; letter-spacing: 2px !important;
     }
     .stButton > button:hover { background-color: #E6C200 !important; }
+    /* Light sky blue for Add Team buttons (left column) */
+    div[data-testid="column"]:nth-of-type(1) .stButton > button {
+        background-color: #87CEFA !important;
+        color: #1a1a1a !important;
+    }
+    div[data-testid="column"]:nth-of-type(1) .stButton > button:hover {
+        background-color: #B0E2FF !important;
+    }
     div[data-testid="stButton"] > button[kind="primary"] {
         background-color: #4CAF50 !important; color: #ffffff !important; border: 3px solid #00FF00 !important; box-shadow: 0 0 8px #00FF00 !important;
     }
@@ -299,7 +307,6 @@ def send_saturday_reminders():
         return
 
     records = get_users_records()
-    sent = 0
     for u in records:
         email = u.get("Email", "").strip()
         if email:
@@ -308,8 +315,7 @@ def send_saturday_reminders():
                     f"Today (Saturday) is the last day to submit or update your rankings for Week {week}.\n\n"
                     f"Voting closes at 11:59 PM ET tonight.\n\n"
                     f"https://your-app-url.streamlit.app\n\n— AG Top 25")
-            if send_email(email, subject, body):
-                sent += 1
+            send_email(email, subject, body)
     with_backoff(lambda: meta.update_acell("B2", str(week)))
 
 def should_archive_previous_week(current_week):
@@ -533,7 +539,6 @@ date_range = format_date_range()
 st.markdown(f"<div style='text-align: left; margin-top: 1.1rem; font-size: 0.95rem; color: #aaaaaa; position: absolute;'>Logged in as: {display_name}</div>", unsafe_allow_html=True)
 st.title(f"Associated Goys Top 25 Poll | Week {week_number} | {date_range}")
 
-# Run maintenance less aggressively
 if "last_maintenance" not in st.session_state:
     st.session_state.last_maintenance = datetime.min.replace(tzinfo=ET)
 
@@ -555,6 +560,9 @@ with tab1:
         st.error("Submissions are closed. Voting reopens Monday at midnight ET (cutoff Saturday 11:59 PM ET).")
     else:
         st.info(f"Voting as: **{display_name}**")
+
+        if "ranking_version" not in st.session_state:
+            st.session_state.ranking_version = 0
 
         if "ranking" not in st.session_state or not st.session_state.get("ranking"):
             own = load_user_previous_ranking(st.session_state.username)
@@ -588,7 +596,7 @@ with tab1:
                 center_result = sort_items(
                     st.session_state.ranking,
                     direction="vertical",
-                    key=f"ranking_{len(st.session_state.ranking)}",
+                    key=f"ranking_{st.session_state.ranking_version}_{len(st.session_state.ranking)}",
                     custom_style=CENTER_STYLE
                 )
                 if center_result != st.session_state.ranking:
@@ -606,6 +614,7 @@ with tab1:
                 with c1:
                     if st.button("Yes", key="yes_clear", use_container_width=True):
                         st.session_state.ranking = []
+                        st.session_state.ranking_version += 1
                         st.session_state.confirm_clear = False
                         st.session_state.show_remove = False
                         st.rerun()
