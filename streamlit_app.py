@@ -559,15 +559,11 @@ date_range = format_date_range()
 st.markdown(f"<div style='text-align: left; margin-top: 1.1rem; font-size: 0.95rem; color: #aaaaaa; position: absolute;'>Logged in as: {display_name}</div>", unsafe_allow_html=True)
 st.title(f"Associated Goys Top 25 Poll | Week {week_number} | {date_range}")
 
-# TEMPORARY: force reminder on this load for testing
-if "force_reminder_done" not in st.session_state:
-    send_saturday_reminders()
-    st.session_state.force_reminder_done = True
-
 if "last_maintenance" not in st.session_state:
     st.session_state.last_maintenance = datetime.min.replace(tzinfo=ET)
 
 if (datetime.now(ET) - st.session_state.last_maintenance).total_seconds() > 300:
+    send_saturday_reminders()
     week_to_archive = should_archive_previous_week(week_number)
     if week_to_archive:
         with st.spinner(f"Finalizing Week {week_to_archive}..."):
@@ -747,3 +743,12 @@ with tab3:
                     st.rerun()
                 else:
                     st.error("Failed to update password.")
+
+        # TEMPORARY TEST BUTTON — remove after debugging
+        st.divider()
+        st.subheader("TEMP: Force Saturday Reminder")
+        if st.button("Send Reminder Now (test)", type="primary"):
+            with st.spinner("Sending reminders..."):
+                send_saturday_reminders()
+            st.success("Reminder function finished. Check logs or your inbox/spam.")
+            st.info("If nothing arrived, the function returned early (not Saturday, already sent, or SMTP failure). Look for print lines in the Cloud logs.")
