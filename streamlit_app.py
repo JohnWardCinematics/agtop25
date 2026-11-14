@@ -279,8 +279,6 @@ def send_email(to_email: str, subject: str, body: str) -> bool:
         msg["To"] = to_email
         msg["Subject"] = subject
         msg.attach(MIMEText(body, "plain"))
-
-        # Use SSL on 465 (more reliable with Gmail than STARTTLS on 587)
         server = smtplib.SMTP_SSL(
             st.secrets["email"]["smtp_server"],
             int(st.secrets["email"].get("smtp_port", 465))
@@ -293,16 +291,12 @@ def send_email(to_email: str, subject: str, body: str) -> bool:
         server.quit()
         return True
     except Exception as e:
-        error_msg = f"SMTP FAILED for {to_email}: {type(e).__name__}: {e}"
-        print(error_msg)
-        st.error(error_msg)
-        st.code(str(e))
+        print(f"Email error: {e}")
         return False
 
 def send_saturday_reminders():
     now = datetime.now(ET)
     if now.weekday() != 5:
-        print("Reminder skipped: not Saturday")
         return
     week = get_current_week_number()
     sh = get_spreadsheet()
@@ -315,12 +309,9 @@ def send_saturday_reminders():
         with_backoff(lambda: meta.append_row(["LastReminderWeek", "0"]))
         last = 0
     if last >= week:
-        print(f"Reminder skipped: already sent for week {week}")
         return
 
     records = get_users_records()
-    sent = 0
-    failed = 0
     for u in records:
         email = u.get("Email", "").strip()
         if email:
@@ -329,13 +320,7 @@ def send_saturday_reminders():
                     f"Today (Saturday) is the last day to submit or update your rankings for Week {week}.\n\n"
                     f"Voting closes at 11:59 PM ET tonight.\n\n"
                     f"https://your-app-url.streamlit.app\n\n— AG Top 25")
-            if send_email(email, subject, body):
-                sent += 1
-                print(f"Reminder sent to {email}")
-            else:
-                failed += 1
-                print(f"Reminder FAILED for {email}")
-    print(f"Reminder summary: {sent} sent, {failed} failed")
+            send_email(email, subject, body)
     with_backoff(lambda: meta.update_acell("B2", str(week)))
 
 def should_archive_previous_week(current_week):
@@ -445,7 +430,6 @@ def load_results(_gc=None):
             person = row["Person"]
             w = 1.0
 
-            # Safe weight lookup – empty or invalid values fall back to 1.0
             if not weights_df.empty and "Person" in weights_df.columns:
                 match = weights_df[weights_df["Person"].astype(str).str.strip().str.lower() == str(person).strip().lower()]
                 if not match.empty and "Weight" in match.columns:
@@ -456,7 +440,6 @@ def load_results(_gc=None):
                         except (ValueError, TypeError):
                             w = 1.0
 
-            # Fallback streak calculation only if no explicit weight was found
             if w == 1.0:
                 weeks = sorted({
                     int(r["Week"]) for r in votelog
@@ -753,12 +736,3 @@ with tab3:
                     st.rerun()
                 else:
                     st.error("Failed to update password.")
-
-        # TEMPORARY TEST BUTTON — remove after debugging
-        st.divider()
-        st.subheader("TEMP: Force Saturday Reminder")
-        if st.button("Send Reminder Now (test)", type="primary"):
-            with st.spinner("Sending reminders..."):
-                send_saturday_reminders()
-            st.success("Reminder function finished. Check logs or your inbox/spam.")
-            st.info("If nothing arrived, the function returned early (not Saturday, already sent, or SMTP failure). Look for print lines in the Cloud logs.")
