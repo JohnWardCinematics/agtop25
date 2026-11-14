@@ -35,12 +35,12 @@ st.markdown("""
         font-weight: 700 !important; width: 100% !important; font-family: 'Bebas Neue', sans-serif !important; letter-spacing: 2px !important;
     }
     .stButton > button:hover { background-color: #E6C200 !important; }
-    /* Light sky blue for add-team buttons only */
-    .add-team-btn .stButton > button {
+    /* LEFT COLUMN ONLY – light sky blue */
+    div[data-testid="stHorizontalBlock"] > div:nth-child(1) .stButton > button {
         background-color: #87CEFA !important;
         color: #1a1a1a !important;
     }
-    .add-team-btn .stButton > button:hover {
+    div[data-testid="stHorizontalBlock"] > div:nth-child(1) .stButton > button:hover {
         background-color: #B0E2FF !important;
     }
     div[data-testid="stButton"] > button[kind="primary"] {
@@ -564,7 +564,6 @@ with tab1:
         if "ranking_version" not in st.session_state:
             st.session_state.ranking_version = 0
 
-        # Only initialize once — never reload just because the list is empty
         if "ranking" not in st.session_state:
             own = load_user_previous_ranking(st.session_state.username)
             if own:
@@ -581,15 +580,12 @@ with tab1:
         with col_left:
             st.markdown('<div class="side-header">Available Teams (click to add)</div>', unsafe_allow_html=True)
             available = [t for t in teams if t not in st.session_state.ranking]
-            # Wrapper so CSS can target only these buttons
-            st.markdown('<div class="add-team-btn">', unsafe_allow_html=True)
             with st.container(height=700):
                 for team in available:
                     if st.button(team, key=f"add_{team}", use_container_width=True):
                         if len(st.session_state.ranking) < 25:
                             st.session_state.ranking.append(team)
                             st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
         with col_center:
             st.markdown(f'<h3 class="center-header">{display_name} Rankings (drag to reorder)</h3>', unsafe_allow_html=True)
             num_col, sort_col = st.columns([0.06, 0.94])
