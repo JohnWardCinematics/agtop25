@@ -279,18 +279,24 @@ def send_email(to_email: str, subject: str, body: str) -> bool:
         msg["To"] = to_email
         msg["Subject"] = subject
         msg.attach(MIMEText(body, "plain"))
-        server = smtplib.SMTP(st.secrets["email"]["smtp_server"], int(st.secrets["email"]["smtp_port"]))
-        server.starttls()
-        server.login(st.secrets["email"]["sender_email"], st.secrets["email"]["sender_password"])
+
+        # Use SSL on 465 (more reliable with Gmail than STARTTLS on 587)
+        server = smtplib.SMTP_SSL(
+            st.secrets["email"]["smtp_server"],
+            int(st.secrets["email"].get("smtp_port", 465))
+        )
+        server.login(
+            st.secrets["email"]["sender_email"],
+            st.secrets["email"]["sender_password"]
+        )
         server.send_message(msg)
         server.quit()
         return True
     except Exception as e:
-        # Force the error into the UI and logs
         error_msg = f"SMTP FAILED for {to_email}: {type(e).__name__}: {e}"
         print(error_msg)
-        st.error(error_msg)          # shows on the page
-        st.code(str(e))              # full exception text
+        st.error(error_msg)
+        st.code(str(e))
         return False
 
 def send_saturday_reminders():
