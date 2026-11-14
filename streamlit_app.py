@@ -425,9 +425,19 @@ def load_results(_gc=None):
             person = row["Person"]
             w = 1.0
 
-            if not weights_df.empty and "Person" in weights_df.columns and person in weights_df["Person"].values:
-                w = float(weights_df.loc[weights_df["Person"] == person, "Weight"].iloc[0])
-            else:
+            # Safe weight lookup – empty or invalid values fall back to 1.0
+            if not weights_df.empty and "Person" in weights_df.columns:
+                match = weights_df[weights_df["Person"].astype(str).str.strip().str.lower() == str(person).strip().lower()]
+                if not match.empty and "Weight" in match.columns:
+                    raw = match["Weight"].iloc[0]
+                    if raw not in (None, "", " "):
+                        try:
+                            w = float(raw)
+                        except (ValueError, TypeError):
+                            w = 1.0
+
+            # Fallback streak calculation only if no explicit weight was found
+            if w == 1.0:
                 weeks = sorted({
                     int(r["Week"]) for r in votelog
                     if r.get("Username") == person and str(r.get("Week", "")).isdigit()
