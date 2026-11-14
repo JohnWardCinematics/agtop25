@@ -304,9 +304,12 @@ def send_saturday_reminders():
         with_backoff(lambda: meta.append_row(["LastReminderWeek", "0"]))
         last = 0
     if last >= week:
+        print(f"Reminder skipped: already sent for week {week}")
         return
 
     records = get_users_records()
+    sent = 0
+    failed = 0
     for u in records:
         email = u.get("Email", "").strip()
         if email:
@@ -315,7 +318,13 @@ def send_saturday_reminders():
                     f"Today (Saturday) is the last day to submit or update your rankings for Week {week}.\n\n"
                     f"Voting closes at 11:59 PM ET tonight.\n\n"
                     f"https://your-app-url.streamlit.app\n\n— AG Top 25")
-            send_email(email, subject, body)
+            if send_email(email, subject, body):
+                sent += 1
+                print(f"Reminder sent to {email}")
+            else:
+                failed += 1
+                print(f"Reminder FAILED for {email}")
+    print(f"Reminder summary: {sent} sent, {failed} failed")
     with_backoff(lambda: meta.update_acell("B2", str(week)))
 
 def should_archive_previous_week(current_week):
