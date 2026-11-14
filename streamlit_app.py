@@ -736,3 +736,44 @@ with tab3:
                     st.rerun()
                 else:
                     st.error("Failed to update password.")
+
+with tab4:
+    st.markdown("### Instructions")
+    st.markdown("""
+    **How to Submit Rankings**
+
+    1. Click teams in the **Available Teams** column (left) to add them to your rankings.
+    2. Drag teams up or down in the center column to set your order (1 = best).
+    3. You must have **exactly 25 teams** before you can submit.
+    4. Use the **CONTROLS** column (right) to:
+       - **CLEAR ALL** — remove every team (with confirmation)
+       - **REMOVE** — pick a specific team to drop
+    5. Click **SUBMIT/UPDATE RANKINGS** when ready. You can update your ballot any time until the deadline.
+
+    **Voting Window**
+
+    - Voting is open **Monday through Saturday**.
+    - Closes at **11:59 PM ET** on Saturday.
+    - Reopens at midnight ET on Monday.
+
+    **Vote Weighting**
+
+    Your ballot is weighted based on consecutive weeks you’ve voted:
+    - Base weight: **1×**
+    - Bonus: +1× for every 4 consecutive weeks
+    - Maximum weight: **5×**
+
+    Weights are applied automatically when results are calculated.
+
+    **How Results Are Calculated**
+
+    - 1st place = 25 points, 2nd = 24 points, … 25th = 1 point
+    - Points are multiplied by your vote weight
+    - First-place votes are tracked separately
+    - Ties are broken by first-place votes
+
+    **Account**
+
+    - Change your display name or password anytime in the **Account** tab.
+    - Your display name is what appears on the rankings page and in results.
+    """)
