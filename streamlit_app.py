@@ -286,7 +286,11 @@ def send_email(to_email: str, subject: str, body: str) -> bool:
         server.quit()
         return True
     except Exception as e:
-        print(f"Email error: {e}")
+        # Force the error into the UI and logs
+        error_msg = f"SMTP FAILED for {to_email}: {type(e).__name__}: {e}"
+        print(error_msg)
+        st.error(error_msg)          # shows on the page
+        st.code(str(e))              # full exception text
         return False
 
 def send_saturday_reminders():
