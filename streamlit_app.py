@@ -851,7 +851,7 @@ with tab3:  # Coaches
         with col_left:
             st.markdown('<div class="side-header">Democrat Pool</div>', unsafe_allow_html=True)
             available_dem = [c for c in dem_list if c not in st.session_state.dem_ranking]
-            with st.container(height=230):
+            with st.container(height=220):
                 for coach in available_dem:
                     if st.button(coach, key=f"add_dem_{coach}", use_container_width=True):
                         if len(st.session_state.dem_ranking) < 5:
@@ -860,37 +860,39 @@ with tab3:  # Coaches
 
             st.markdown('<div class="side-header" style="margin-top:2px; margin-bottom:2px;">Republican Pool</div>', unsafe_allow_html=True)
             available_rep = [c for c in rep_list if c not in st.session_state.rep_ranking]
-            with st.container(height=230):
+            with st.container(height=220):
                 for coach in available_rep:
                     if st.button(coach, key=f"add_rep_{coach}", use_container_width=True):
                         if len(st.session_state.rep_ranking) < 5:
                             st.session_state.rep_ranking.append(coach)
                             st.rerun()
 
-       # CENTER COLUMN – selected (non-scrollable)
+        # CENTER COLUMN – selected (fixed height so they stay aligned)
         with col_center:
             st.markdown('<div class="side-header">Democrats (Top 5)</div>', unsafe_allow_html=True)
-            dem_result = sort_items(
-                st.session_state.dem_ranking,
-                direction="vertical",
-                key=f"dem_rank_{st.session_state.dem_ranking_version}_{len(st.session_state.dem_ranking)}",
-                custom_style=CENTER_STYLE
-            )
-            if dem_result != st.session_state.dem_ranking:
-                st.session_state.dem_ranking = dem_result
-                st.rerun()
+            with st.container(height=220):
+                dem_result = sort_items(
+                    st.session_state.dem_ranking,
+                    direction="vertical",
+                    key=f"dem_rank_{st.session_state.dem_ranking_version}_{len(st.session_state.dem_ranking)}",
+                    custom_style=CENTER_STYLE
+                )
+                if dem_result != st.session_state.dem_ranking:
+                    st.session_state.dem_ranking = dem_result
+                    st.rerun()
 
             st.markdown('<div class="side-header" style="margin-top:2px; margin-bottom:2px;">Republicans (Top 5)</div>', unsafe_allow_html=True)
-            rep_result = sort_items(
-                st.session_state.rep_ranking,
-                direction="vertical",
-                key=f"rep_rank_{st.session_state.rep_ranking_version}_{len(st.session_state.rep_ranking)}",
-                custom_style=CENTER_STYLE
-            )
-            if rep_result != st.session_state.rep_ranking:
-                st.session_state.rep_ranking = rep_result
-                st.rerun()
-
+            with st.container(height=220):
+                rep_result = sort_items(
+                    st.session_state.rep_ranking,
+                    direction="vertical",
+                    key=f"rep_rank_{st.session_state.rep_ranking_version}_{len(st.session_state.rep_ranking)}",
+                    custom_style=CENTER_STYLE
+                )
+                if rep_result != st.session_state.rep_ranking:
+                    st.session_state.rep_ranking = rep_result
+                    st.rerun()
+                    
         # RIGHT COLUMN – all controls together
         with col_right:
             st.markdown('<div class="side-header">CONTROLS</div>', unsafe_allow_html=True)
