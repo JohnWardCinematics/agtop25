@@ -845,33 +845,30 @@ with tab3:  # Coaches
         if "rep_ranking_version" not in st.session_state:
             st.session_state.rep_ranking_version = 0
 
-        # Strong CSS overrides
+        # Aggressive CSS that targets buttons by key prefix
         st.markdown("""
         <style>
-        /* Democrat pool – light blue */
-        .dem-pool button {
+        /* Democrat pool buttons (keys starting with add_dem_) */
+        button[data-testid="baseButton-secondary"][kind="secondary"] {
             background-color: #87CEFA !important;
             color: #1a1a1a !important;
         }
-        .dem-pool button:hover {
-            background-color: #B0E2FF !important;
-        }
-        /* Republican pool – light red (hard forced) */
-        .rep-pool button {
+        /* Override specifically for Republican pool */
+        .rep-pool-force button {
             background-color: #FFB6C1 !important;
             color: #1a1a1a !important;
         }
-        .rep-pool button:hover {
+        .rep-pool-force button:hover {
             background-color: #FFC0CB !important;
         }
         /* Selected Democrats – dark blue */
-        .dem-selected .sortable-item {
-            background-color: #1E90FF !important;
+        .dem-selected-force .sortable-item {
+            background-color: #1565C0 !important;
             color: white !important;
         }
         /* Selected Republicans – dark red */
-        .rep-selected .sortable-item {
-            background-color: #DC143C !important;
+        .rep-selected-force .sortable-item {
+            background-color: #B71C1C !important;
             color: white !important;
         }
         </style>
@@ -883,19 +880,17 @@ with tab3:  # Coaches
         with col_left:
             st.markdown('<div class="side-header">Democrat Pool</div>', unsafe_allow_html=True)
             available_dem = [c for c in dem_list if c not in st.session_state.dem_ranking]
-            with st.container(height=260):
-                st.markdown('<div class="dem-pool">', unsafe_allow_html=True)
+            with st.container(height=250):
                 for coach in available_dem:
                     if st.button(coach, key=f"add_dem_{coach}", use_container_width=True):
                         if len(st.session_state.dem_ranking) < 5:
                             st.session_state.dem_ranking.append(coach)
                             st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
 
-            st.markdown('<div class="side-header" style="margin-top:6px;">Republican Pool</div>', unsafe_allow_html=True)
+            st.markdown('<div class="side-header" style="margin-top:4px;">Republican Pool</div>', unsafe_allow_html=True)
             available_rep = [c for c in rep_list if c not in st.session_state.rep_ranking]
-            with st.container(height=260):
-                st.markdown('<div class="rep-pool">', unsafe_allow_html=True)
+            with st.container(height=250):
+                st.markdown('<div class="rep-pool-force">', unsafe_allow_html=True)
                 for coach in available_rep:
                     if st.button(coach, key=f"add_rep_{coach}", use_container_width=True):
                         if len(st.session_state.rep_ranking) < 5:
@@ -903,10 +898,10 @@ with tab3:  # Coaches
                             st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
-        # CENTER – selected (aligned with pools)
+        # CENTER – selected
         with col_center:
             st.markdown('<div class="side-header">Democrats (Top 5)</div>', unsafe_allow_html=True)
-            st.markdown('<div class="dem-selected">', unsafe_allow_html=True)
+            st.markdown('<div class="dem-selected-force">', unsafe_allow_html=True)
             dem_result = sort_items(
                 st.session_state.dem_ranking,
                 direction="vertical",
@@ -918,8 +913,8 @@ with tab3:  # Coaches
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-            st.markdown('<div class="side-header" style="margin-top:18px;">Republicans (Top 5)</div>', unsafe_allow_html=True)
-            st.markdown('<div class="rep-selected">', unsafe_allow_html=True)
+            st.markdown('<div class="side-header" style="margin-top:10px;">Republicans (Top 5)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="rep-selected-force">', unsafe_allow_html=True)
             rep_result = sort_items(
                 st.session_state.rep_ranking,
                 direction="vertical",
@@ -977,7 +972,6 @@ with tab3:  # Coaches
                 st.dataframe(rep_df, hide_index=True, use_container_width=True)
             else:
                 st.info("No Republican votes yet.")
-
 with tab4:
     st.markdown("### Account Settings")
     user = get_user_record(st.session_state.username)
