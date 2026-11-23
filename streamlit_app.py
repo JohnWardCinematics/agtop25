@@ -867,31 +867,29 @@ with tab3:  # Coaches
                             st.session_state.rep_ranking.append(coach)
                             st.rerun()
 
-        # CENTER COLUMN – selected stacked to match the pools
+       # CENTER COLUMN – selected (non-scrollable)
         with col_center:
             st.markdown('<div class="side-header">Democrats (Top 5)</div>', unsafe_allow_html=True)
-            with st.container(height=230):
-                dem_result = sort_items(
-                    st.session_state.dem_ranking,
-                    direction="vertical",
-                    key=f"dem_rank_{st.session_state.dem_ranking_version}_{len(st.session_state.dem_ranking)}",
-                    custom_style=CENTER_STYLE
-                )
-                if dem_result != st.session_state.dem_ranking:
-                    st.session_state.dem_ranking = dem_result
-                    st.rerun()
+            dem_result = sort_items(
+                st.session_state.dem_ranking,
+                direction="vertical",
+                key=f"dem_rank_{st.session_state.dem_ranking_version}_{len(st.session_state.dem_ranking)}",
+                custom_style=CENTER_STYLE
+            )
+            if dem_result != st.session_state.dem_ranking:
+                st.session_state.dem_ranking = dem_result
+                st.rerun()
 
             st.markdown('<div class="side-header" style="margin-top:2px; margin-bottom:2px;">Republicans (Top 5)</div>', unsafe_allow_html=True)
-            with st.container(height=230):
-                rep_result = sort_items(
-                    st.session_state.rep_ranking,
-                    direction="vertical",
-                    key=f"rep_rank_{st.session_state.rep_ranking_version}_{len(st.session_state.rep_ranking)}",
-                    custom_style=CENTER_STYLE
-                )
-                if rep_result != st.session_state.rep_ranking:
-                    st.session_state.rep_ranking = rep_result
-                    st.rerun()
+            rep_result = sort_items(
+                st.session_state.rep_ranking,
+                direction="vertical",
+                key=f"rep_rank_{st.session_state.rep_ranking_version}_{len(st.session_state.rep_ranking)}",
+                custom_style=CENTER_STYLE
+            )
+            if rep_result != st.session_state.rep_ranking:
+                st.session_state.rep_ranking = rep_result
+                st.rerun()
 
         # RIGHT COLUMN – all controls together
         with col_right:
@@ -938,6 +936,33 @@ with tab3:  # Coaches
                 st.dataframe(rep_df, hide_index=True, use_container_width=True)
             else:
                 st.info("No Republican votes yet.")
+
+with tab4:
+    st.markdown("### Account Settings")
+    user = get_user_record(st.session_state.username)
+    if not user:
+        st.error("Could not load account info.")
+    else:
+        st.write(f"**Username:** {user.get('Username')}")
+        st.write(f"**Email:** {user.get('Email') or '_(not set)_'}")
+        st.write(f"**Member since:** {user.get('CreatedAt', '—')}")
+
+        consecutive = get_consecutive_weeks(st.session_state.username)
+        weight = get_effective_weight(st.session_state.username)
+        st.write(f"**Consecutive weeks voted:** {consecutive}")
+        st.write(f"**Current weight:** {weight:.0f}×")
+
+        st.divider()
+        st.subheader("Change Display Name")
+        new_display = st.text_input("New display name", value=user.get("DisplayName", ""), key="new_display")
+        if st.button("Update Display Name", key="update_display"):
+            if not new_display or not new_display.strip():
+                st.error("Display name cannot be empty.")
+            elif update_display_name(st.session_state.username, new_display):
+                st.success("Display name updated.")
+                st.rerun()
+            else:
+                st.error("Failed to update display name.")
 
         st.divider()
         st.subheader("Change Password")
