@@ -486,6 +486,136 @@ def load_teams(_gc=None):
         st.error(f"Could not load teams from sheet: {e}")
         return []
 
+# ===================== COACHES POLL FUNCTIONS =====================
+@st.cache_data(ttl=600)
+def load_coaches(_gc=None):
+    sh = get_spreadsheet()
+    try:
+        records = with_backoff(lambda: sh.worksheet("Coaches").get_all_records())
+        dem = [r["Coach"].strip() for r in records if str(r.get("Party", "")).strip().lower() in ("democrat", "dem", "d")]
+        rep = [r["Coach"].strip() for r in records if str(r.get("Party", "")).strip().lower() in ("republican", "rep", "r")]
+        return dem, rep
+    except Exception as e:
+        st.error(f"Could not load coaches: {e}")
+        return [], []
+
+def save_coach_submission(username, dem_ranking, rep_ranking):
+    sh = get_spreadsheet()
+    try:
+        try:
+            ws = with_backoff(lambda: sh.worksheet("CoachSubmissions"))
+        except Exception:
+            ws = with_backoff(lambda: sh.add_worksheet(title="CoachSubmissions", rows=500, cols=60))
+            header = ["Timestamp", "Person"] + [f"Dem{i}" for i in range(1, 26)] + [f"Rep{i}" for i in range(1, 26)]
+            with_backoff(lambda: ws.append_row(header))
+
+        records = with_backoff(lambda: ws.get_all_records())
+        row_num = next((i for i, rec in enumerate(records, start=2) if rec.get("Person") == username), None)
+        timestamp = datetime.now(ET).strftime("%Y-%m-%d %H:%M:%S")
+
+        dem_padded = (dem_ranking + [""] * 25)[:25]
+        rep_padded = (rep_ranking + [""] * 25)[:25]
+        row_data = [timestamp, username] + dem_padded + rep_padded
+
+        if row_num:
+            with_backoff(lambda: ws.update(f"A{row_num}:AZ{row_num}", [row_data]))
+        else:
+            with_backoff(lambda: ws.append_row(row_data))
+        st.cache_data.clear()
+        return True
+    except Exception as e:
+        st.error(f"Coach save failed: {e}")
+        return False
+
+@st.cache_data(ttl=180)
+def load_coach_results(_gc=None):
+    sh = get_spreadsheet()
+    try:
+        submissions = with_backoff(lambda: sh.worksheet("CoachSubmissions").get_all_records())
+        if not submissions:
+            return pd.DataFrame(), pd.DataFrame()
+
+        df = pd.DataFrame(submissions)
+        df["Timestamp"] = pd.to_datetime(df["Timestamp"])
+        latest = df.sort_values("Timestamp").groupby("Person").tail(1)
+
+        dem_points = defaultdict(float)
+        rep_points = defaultdict(float)
+
+        for _, row in latest.iterrows():
+            person = row["Person"]
+            w = get_effective_weight(person)
+
+            for pos in range(1, 6):  # Top 5 only: 5,4,3,2,1 points
+                dem_coach = row.get(f"Dem{pos}")
+                if dem_coach:
+                    dem_points[dem_coach] += (6 - pos) * w
+
+                rep_coach = row.get(f"Rep{pos}")
+                if rep_coach:
+                    rep_points[rep_coach] += (6 - pos) * w
+
+        dem_df = pd.DataFrame(
+            [{"Coach": k, "Points": int(round(v))} for k, v in dem_points.items()]
+        ).sort_values("Points", ascending=False).reset_index(drop=True) if dem_points else pd.DataFrame()
+
+        rep_df = pd.DataFrame(
+            [{"Coach": k, "Points": int(round(v))} for k, v in rep_points.items()]
+        ).sort_values("Points", ascending=False).reset_index(drop=True) if rep_points else pd.DataFrame()
+
+        return dem_df, rep_df
+    except Exception:
+        return pd.DataFrame(), pd.DataFrame()
+
+def should_archive_coaches(current_week):
+    if current_week <= 1:
+        return None
+    prev = current_week - 1
+    sh = get_spreadsheet()
+    titles = [ws.title for ws in with_backoff(lambda: sh.worksheets())]
+    if f"Week {prev} Coaches" not in titles:
+        return prev
+    return None
+
+def archive_coaches(week_to_archive):
+    sh = get_spreadsheet()
+    try:
+        dem_df, rep_df = load_coach_results()
+        tab_name = f"Week {week_to_archive} Coaches"
+        titles = [ws.title for ws in with_backoff(lambda: sh.worksheets())]
+
+        if tab_name not in titles:
+            new_ws = with_backoff(lambda: sh.add_worksheet(title=tab_name, rows=60, cols=6))
+            rows = [["Party", "Rank", "Coach", "Points"]]
+
+            if not dem_df.empty:
+                for i, row in dem_df.head(25).iterrows():
+                    rows.append(["Democrat", i + 1, row["Coach"], int(row["Points"])])
+            else:
+                rows.append(["Democrat", "", "(No votes)", ""])
+
+            if not rep_df.empty:
+                for i, row in rep_df.head(25).iterrows():
+                    rows.append(["Republican", i + 1, row["Coach"], int(row["Points"])])
+            else:
+                rows.append(["Republican", "", "(No votes)", ""])
+
+            with_backoff(lambda: new_ws.update("A1", rows))
+
+        try:
+            ws = with_backoff(lambda: sh.worksheet("CoachSubmissions"))
+            if ws.row_count > 1:
+                with_backoff(lambda: ws.batch_clear(["A2:AZ1000"]))
+        except Exception:
+            pass
+
+        st.cache_data.clear()
+        return True
+    except Exception as e:
+        st.error(f"Coach archive failed: {e}")
+        return False
+# ===================== END COACHES FUNCTIONS =====================
+
 def get_display_name(username):
     display_names = st.secrets.get("display_names", {})
     if username in display_names:
@@ -557,16 +687,27 @@ if "last_maintenance" not in st.session_state:
 
 if (datetime.now(ET) - st.session_state.last_maintenance).total_seconds() > 300:
     send_saturday_reminders()
+
+    # Main Top 25 archive
     week_to_archive = should_archive_previous_week(week_number)
     if week_to_archive:
         with st.spinner(f"Finalizing Week {week_to_archive}..."):
             if archive_and_reset(week_to_archive):
                 st.success(f"Week {week_to_archive} finalized. New week is ready.")
                 st.rerun()
+
+    # Coaches archive
+    coaches_week = should_archive_coaches(week_number)
+    if coaches_week:
+        with st.spinner(f"Finalizing Week {coaches_week} Coaches..."):
+            if archive_coaches(coaches_week):
+                st.success(f"Week {coaches_week} Coaches finalized.")
+                st.rerun()
+
     st.session_state.last_maintenance = datetime.now(ET)
 
 teams = load_teams()
-tab1, tab2, tab3, tab4 = st.tabs(["Submit Rankings", "Current Results", "Account", "Instructions"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["Submit Rankings", "Current Results", "Coaches", "Account", "Instructions"])
 
 with tab1:
     if not is_open():
@@ -687,7 +828,110 @@ with tab2:
     else:
         st.info("No submissions yet (or sheet temporarily unavailable).")
 
-with tab3:
+with tab3:  # Coaches
+    dem_list, rep_list = load_coaches()
+    st.markdown("### 2028 Coaching Search")
+    st.caption("Rank your Top 5 for each party (5-4-3-2-1 points, weighted)")
+
+    if not is_open():
+        st.error("Submissions are closed. Voting reopens Monday at midnight ET (cutoff Saturday 11:59 PM ET).")
+    else:
+        coach_submit, coach_results = st.tabs(["Submit Coaches", "Coach Results"])
+
+        with coach_submit:
+            if "dem_ranking" not in st.session_state:
+                st.session_state.dem_ranking = []
+            if "rep_ranking" not in st.session_state:
+                st.session_state.rep_ranking = []
+            if "dem_ranking_version" not in st.session_state:
+                st.session_state.dem_ranking_version = 0
+            if "rep_ranking_version" not in st.session_state:
+                st.session_state.rep_ranking_version = 0
+
+            # Democrats
+            st.markdown("#### Democrats")
+            col_d1, col_d2 = st.columns([1, 2])
+            with col_d1:
+                available_dem = [c for c in dem_list if c not in st.session_state.dem_ranking]
+                with st.container(height=400):
+                    for coach in available_dem:
+                        if st.button(coach, key=f"add_dem_{coach}", use_container_width=True):
+                            if len(st.session_state.dem_ranking) < 5:
+                                st.session_state.dem_ranking.append(coach)
+                                st.rerun()
+            with col_d2:
+                dem_result = sort_items(
+                    st.session_state.dem_ranking,
+                    direction="vertical",
+                    key=f"dem_rank_{st.session_state.dem_ranking_version}_{len(st.session_state.dem_ranking)}",
+                    custom_style=CENTER_STYLE
+                )
+                if dem_result != st.session_state.dem_ranking:
+                    st.session_state.dem_ranking = dem_result
+                    st.rerun()
+
+            # Republicans
+            st.markdown("#### Republicans")
+            col_r1, col_r2 = st.columns([1, 2])
+            with col_r1:
+                available_rep = [c for c in rep_list if c not in st.session_state.rep_ranking]
+                with st.container(height=400):
+                    for coach in available_rep:
+                        if st.button(coach, key=f"add_rep_{coach}", use_container_width=True):
+                            if len(st.session_state.rep_ranking) < 5:
+                                st.session_state.rep_ranking.append(coach)
+                                st.rerun()
+            with col_r2:
+                rep_result = sort_items(
+                    st.session_state.rep_ranking,
+                    direction="vertical",
+                    key=f"rep_rank_{st.session_state.rep_ranking_version}_{len(st.session_state.rep_ranking)}",
+                    custom_style=CENTER_STYLE
+                )
+                if rep_result != st.session_state.rep_ranking:
+                    st.session_state.rep_ranking = rep_result
+                    st.rerun()
+
+            # Controls
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                if st.button("Clear Democrats"):
+                    st.session_state.dem_ranking = []
+                    st.session_state.dem_ranking_version += 1
+                    st.rerun()
+            with c2:
+                if st.button("Clear Republicans"):
+                    st.session_state.rep_ranking = []
+                    st.session_state.rep_ranking_version += 1
+                    st.rerun()
+            with c3:
+                can_submit = len(st.session_state.dem_ranking) > 0 or len(st.session_state.rep_ranking) > 0
+                if st.button("SUBMIT / UPDATE COACHES", type="primary", disabled=not can_submit):
+                    if save_coach_submission(
+                        st.session_state.username,
+                        st.session_state.dem_ranking,
+                        st.session_state.rep_ranking
+                    ):
+                        st.success("Coaches submitted!")
+                        st.rerun()
+
+        with coach_results:
+            dem_df, rep_df = load_coach_results()
+            col_d, col_r = st.columns(2)
+            with col_d:
+                st.markdown("#### Democrat Coaches (Weighted)")
+                if not dem_df.empty:
+                    st.dataframe(dem_df, hide_index=True, use_container_width=True)
+                else:
+                    st.info("No Democrat votes yet.")
+            with col_r:
+                st.markdown("#### Republican Coaches (Weighted)")
+                if not rep_df.empty:
+                    st.dataframe(rep_df, hide_index=True, use_container_width=True)
+                else:
+                    st.info("No Republican votes yet.")
+
+with tab4:
     st.markdown("### Account Settings")
     user = get_user_record(st.session_state.username)
     if not user:
@@ -737,7 +981,7 @@ with tab3:
                 else:
                     st.error("Failed to update password.")
 
-with tab4:
+with tab5:
     st.markdown("### Instructions")
     st.markdown("""
     **How to Submit Rankings**
@@ -771,6 +1015,13 @@ with tab4:
     - Points are multiplied by your vote weight
     - First-place votes are tracked separately
     - Ties are broken by first-place votes
+
+    **Coaches Poll (2028 Coaching Search)**
+
+    - Rank up to 5 coaches for Democrats and up to 5 for Republicans.
+    - Points: 1st = 5, 2nd = 4, 3rd = 3, 4th = 2, 5th = 1 (unranked = 0).
+    - Same weighting system applies.
+    - Weekly results are archived automatically.
 
     **Account**
 
