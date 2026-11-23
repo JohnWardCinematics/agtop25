@@ -870,26 +870,28 @@ with tab3:  # Coaches
         # CENTER COLUMN – selected stacked to match the pools
         with col_center:
             st.markdown('<div class="side-header">Democrats (Top 5)</div>', unsafe_allow_html=True)
-            dem_result = sort_items(
-                st.session_state.dem_ranking,
-                direction="vertical",
-                key=f"dem_rank_{st.session_state.dem_ranking_version}_{len(st.session_state.dem_ranking)}",
-                custom_style=CENTER_STYLE
-            )
-            if dem_result != st.session_state.dem_ranking:
-                st.session_state.dem_ranking = dem_result
-                st.rerun()
+            with st.container(height=230):
+                dem_result = sort_items(
+                    st.session_state.dem_ranking,
+                    direction="vertical",
+                    key=f"dem_rank_{st.session_state.dem_ranking_version}_{len(st.session_state.dem_ranking)}",
+                    custom_style=CENTER_STYLE
+                )
+                if dem_result != st.session_state.dem_ranking:
+                    st.session_state.dem_ranking = dem_result
+                    st.rerun()
 
-            st.markdown('<div class="side-header" style="margin-top:8px; margin-bottom:2px;">Republicans (Top 5)</div>', unsafe_allow_html=True)
-            rep_result = sort_items(
-                st.session_state.rep_ranking,
-                direction="vertical",
-                key=f"rep_rank_{st.session_state.rep_ranking_version}_{len(st.session_state.rep_ranking)}",
-                custom_style=CENTER_STYLE
-            )
-            if rep_result != st.session_state.rep_ranking:
-                st.session_state.rep_ranking = rep_result
-                st.rerun()
+            st.markdown('<div class="side-header" style="margin-top:2px; margin-bottom:2px;">Republicans (Top 5)</div>', unsafe_allow_html=True)
+            with st.container(height=230):
+                rep_result = sort_items(
+                    st.session_state.rep_ranking,
+                    direction="vertical",
+                    key=f"rep_rank_{st.session_state.rep_ranking_version}_{len(st.session_state.rep_ranking)}",
+                    custom_style=CENTER_STYLE
+                )
+                if rep_result != st.session_state.rep_ranking:
+                    st.session_state.rep_ranking = rep_result
+                    st.rerun()
 
         # RIGHT COLUMN – all controls together
         with col_right:
