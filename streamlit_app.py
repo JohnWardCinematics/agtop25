@@ -836,100 +836,145 @@ with tab3:  # Coaches
     if not is_open():
         st.error("Submissions are closed. Voting reopens Monday at midnight ET (cutoff Saturday 11:59 PM ET).")
     else:
-        coach_submit, coach_results = st.tabs(["Submit Coaches", "Coach Results"])
+        if "dem_ranking" not in st.session_state:
+            st.session_state.dem_ranking = []
+        if "rep_ranking" not in st.session_state:
+            st.session_state.rep_ranking = []
+        if "dem_ranking_version" not in st.session_state:
+            st.session_state.dem_ranking_version = 0
+        if "rep_ranking_version" not in st.session_state:
+            st.session_state.rep_ranking_version = 0
 
-        with coach_submit:
-            if "dem_ranking" not in st.session_state:
+        # Custom styles for coach buttons
+        st.markdown("""
+        <style>
+        /* Democrat pool buttons - light blue */
+        div[data-testid="column"]:nth-of-type(1) .stButton > button {
+            background-color: #87CEFA !important;
+            color: #1a1a1a !important;
+        }
+        div[data-testid="column"]:nth-of-type(1) .stButton > button:hover {
+            background-color: #B0E2FF !important;
+        }
+        /* Republican pool buttons - light red */
+        div[data-testid="column"]:nth-of-type(1) .rep-pool .stButton > button {
+            background-color: #FFB6C1 !important;
+            color: #1a1a1a !important;
+        }
+        div[data-testid="column"]:nth-of-type(1) .rep-pool .stButton > button:hover {
+            background-color: #FFC0CB !important;
+        }
+        /* Selected Democrats - darker blue */
+        .dem-selected .sortable-item {
+            background-color: #1E90FF !important;
+            color: white !important;
+        }
+        /* Selected Republicans - darker red */
+        .rep-selected .sortable-item {
+            background-color: #DC143C !important;
+            color: white !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        col_left, col_center, col_right = st.columns([1.1, 1.6, 1])
+
+        # LEFT COLUMN – stacked pools
+        with col_left:
+            st.markdown('<div class="side-header">Democrat Pool</div>', unsafe_allow_html=True)
+            available_dem = [c for c in dem_list if c not in st.session_state.dem_ranking]
+            with st.container(height=280):
+                for coach in available_dem:
+                    if st.button(coach, key=f"add_dem_{coach}", use_container_width=True):
+                        if len(st.session_state.dem_ranking) < 5:
+                            st.session_state.dem_ranking.append(coach)
+                            st.rerun()
+
+            st.markdown('<div class="side-header" style="margin-top:8px;">Republican Pool</div>', unsafe_allow_html=True)
+            available_rep = [c for c in rep_list if c not in st.session_state.rep_ranking]
+            with st.container(height=280):
+                st.markdown('<div class="rep-pool">', unsafe_allow_html=True)
+                for coach in available_rep:
+                    if st.button(coach, key=f"add_rep_{coach}", use_container_width=True):
+                        if len(st.session_state.rep_ranking) < 5:
+                            st.session_state.rep_ranking.append(coach)
+                            st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+
+        # CENTER COLUMN – selected rankings
+        with col_center:
+            st.markdown('<div class="side-header">Democrats (Top 5)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="dem-selected">', unsafe_allow_html=True)
+            dem_result = sort_items(
+                st.session_state.dem_ranking,
+                direction="vertical",
+                key=f"dem_rank_{st.session_state.dem_ranking_version}_{len(st.session_state.dem_ranking)}",
+                custom_style=CENTER_STYLE
+            )
+            if dem_result != st.session_state.dem_ranking:
+                st.session_state.dem_ranking = dem_result
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            st.markdown('<div class="side-header" style="margin-top:12px;">Republicans (Top 5)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="rep-selected">', unsafe_allow_html=True)
+            rep_result = sort_items(
+                st.session_state.rep_ranking,
+                direction="vertical",
+                key=f"rep_rank_{st.session_state.rep_ranking_version}_{len(st.session_state.rep_ranking)}",
+                custom_style=CENTER_STYLE
+            )
+            if rep_result != st.session_state.rep_ranking:
+                st.session_state.rep_ranking = rep_result
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # RIGHT COLUMN – controls
+        with col_right:
+            st.markdown('<div class="side-header">CONTROLS</div>', unsafe_allow_html=True)
+            if st.button("Clear Democrats", use_container_width=True):
                 st.session_state.dem_ranking = []
-            if "rep_ranking" not in st.session_state:
+                st.session_state.dem_ranking_version += 1
+                st.rerun()
+            if st.button("Clear Republicans", use_container_width=True):
                 st.session_state.rep_ranking = []
-            if "dem_ranking_version" not in st.session_state:
-                st.session_state.dem_ranking_version = 0
-            if "rep_ranking_version" not in st.session_state:
-                st.session_state.rep_ranking_version = 0
+                st.session_state.rep_ranking_version += 1
+                st.rerun()
+            if st.button("Clear Both", use_container_width=True):
+                st.session_state.dem_ranking = []
+                st.session_state.rep_ranking = []
+                st.session_state.dem_ranking_version += 1
+                st.session_state.rep_ranking_version += 1
+                st.rerun()
 
-            # Democrats
-            st.markdown("#### Democrats")
-            col_d1, col_d2 = st.columns([1, 2])
-            with col_d1:
-                available_dem = [c for c in dem_list if c not in st.session_state.dem_ranking]
-                with st.container(height=400):
-                    for coach in available_dem:
-                        if st.button(coach, key=f"add_dem_{coach}", use_container_width=True):
-                            if len(st.session_state.dem_ranking) < 5:
-                                st.session_state.dem_ranking.append(coach)
-                                st.rerun()
-            with col_d2:
-                dem_result = sort_items(
+            st.write("")
+            can_submit = len(st.session_state.dem_ranking) > 0 or len(st.session_state.rep_ranking) > 0
+            if st.button("SUBMIT / UPDATE COACHES", type="primary", disabled=not can_submit, use_container_width=True):
+                if save_coach_submission(
+                    st.session_state.username,
                     st.session_state.dem_ranking,
-                    direction="vertical",
-                    key=f"dem_rank_{st.session_state.dem_ranking_version}_{len(st.session_state.dem_ranking)}",
-                    custom_style=CENTER_STYLE
-                )
-                if dem_result != st.session_state.dem_ranking:
-                    st.session_state.dem_ranking = dem_result
+                    st.session_state.rep_ranking
+                ):
+                    st.success("Coaches submitted!")
                     st.rerun()
 
-            # Republicans
-            st.markdown("#### Republicans")
-            col_r1, col_r2 = st.columns([1, 2])
-            with col_r1:
-                available_rep = [c for c in rep_list if c not in st.session_state.rep_ranking]
-                with st.container(height=400):
-                    for coach in available_rep:
-                        if st.button(coach, key=f"add_rep_{coach}", use_container_width=True):
-                            if len(st.session_state.rep_ranking) < 5:
-                                st.session_state.rep_ranking.append(coach)
-                                st.rerun()
-            with col_r2:
-                rep_result = sort_items(
-                    st.session_state.rep_ranking,
-                    direction="vertical",
-                    key=f"rep_rank_{st.session_state.rep_ranking_version}_{len(st.session_state.rep_ranking)}",
-                    custom_style=CENTER_STYLE
-                )
-                if rep_result != st.session_state.rep_ranking:
-                    st.session_state.rep_ranking = rep_result
-                    st.rerun()
-
-            # Controls
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                if st.button("Clear Democrats"):
-                    st.session_state.dem_ranking = []
-                    st.session_state.dem_ranking_version += 1
-                    st.rerun()
-            with c2:
-                if st.button("Clear Republicans"):
-                    st.session_state.rep_ranking = []
-                    st.session_state.rep_ranking_version += 1
-                    st.rerun()
-            with c3:
-                can_submit = len(st.session_state.dem_ranking) > 0 or len(st.session_state.rep_ranking) > 0
-                if st.button("SUBMIT / UPDATE COACHES", type="primary", disabled=not can_submit):
-                    if save_coach_submission(
-                        st.session_state.username,
-                        st.session_state.dem_ranking,
-                        st.session_state.rep_ranking
-                    ):
-                        st.success("Coaches submitted!")
-                        st.rerun()
-
-        with coach_results:
-            dem_df, rep_df = load_coach_results()
-            col_d, col_r = st.columns(2)
-            with col_d:
-                st.markdown("#### Democrat Coaches (Weighted)")
-                if not dem_df.empty:
-                    st.dataframe(dem_df, hide_index=True, use_container_width=True)
-                else:
-                    st.info("No Democrat votes yet.")
-            with col_r:
-                st.markdown("#### Republican Coaches (Weighted)")
-                if not rep_df.empty:
-                    st.dataframe(rep_df, hide_index=True, use_container_width=True)
-                else:
-                    st.info("No Republican votes yet.")
+        # Results sub-section (kept below for convenience)
+        st.divider()
+        st.markdown("#### Current Results")
+        dem_df, rep_df = load_coach_results()
+        col_d, col_r = st.columns(2)
+        with col_d:
+            st.markdown("**Democrat Coaches**")
+            if not dem_df.empty:
+                st.dataframe(dem_df, hide_index=True, use_container_width=True)
+            else:
+                st.info("No Democrat votes yet.")
+        with col_r:
+            st.markdown("**Republican Coaches**")
+            if not rep_df.empty:
+                st.dataframe(rep_df, hide_index=True, use_container_width=True)
+            else:
+                st.info("No Republican votes yet.")
 
 with tab4:
     st.markdown("### Account Settings")
