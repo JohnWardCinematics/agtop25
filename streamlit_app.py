@@ -845,21 +845,30 @@ with tab3:  # Coaches
         if "rep_ranking_version" not in st.session_state:
             st.session_state.rep_ranking_version = 0
 
-        # ---- ROW 1: Democrats ----
-        st.markdown("#### Democrats")
-        col_d_left, col_d_center, col_d_right = st.columns([1.15, 1.7, 1])
+        col_left, col_center, col_right = st.columns([1.15, 1.7, 1])
 
-        with col_d_left:
+        # LEFT COLUMN – pools stacked with almost no gap
+        with col_left:
             st.markdown('<div class="side-header">Democrat Pool</div>', unsafe_allow_html=True)
             available_dem = [c for c in dem_list if c not in st.session_state.dem_ranking]
-            with st.container(height=240):
+            with st.container(height=230):
                 for coach in available_dem:
                     if st.button(coach, key=f"add_dem_{coach}", use_container_width=True):
                         if len(st.session_state.dem_ranking) < 5:
                             st.session_state.dem_ranking.append(coach)
                             st.rerun()
 
-        with col_d_center:
+            st.markdown('<div class="side-header" style="margin-top:2px; margin-bottom:2px;">Republican Pool</div>', unsafe_allow_html=True)
+            available_rep = [c for c in rep_list if c not in st.session_state.rep_ranking]
+            with st.container(height=230):
+                for coach in available_rep:
+                    if st.button(coach, key=f"add_rep_{coach}", use_container_width=True):
+                        if len(st.session_state.rep_ranking) < 5:
+                            st.session_state.rep_ranking.append(coach)
+                            st.rerun()
+
+        # CENTER COLUMN – selected stacked to match the pools
+        with col_center:
             st.markdown('<div class="side-header">Democrats (Top 5)</div>', unsafe_allow_html=True)
             dem_result = sort_items(
                 st.session_state.dem_ranking,
@@ -871,29 +880,7 @@ with tab3:  # Coaches
                 st.session_state.dem_ranking = dem_result
                 st.rerun()
 
-        with col_d_right:
-            st.markdown('<div class="side-header">CONTROLS</div>', unsafe_allow_html=True)
-            if st.button("Clear Democrats", use_container_width=True):
-                st.session_state.dem_ranking = []
-                st.session_state.dem_ranking_version += 1
-                st.rerun()
-
-        # ---- ROW 2: Republicans ----
-        st.markdown("#### Republicans")
-        col_r_left, col_r_center, col_r_right = st.columns([1.15, 1.7, 1])
-
-        with col_r_left:
-            st.markdown('<div class="side-header">Republican Pool</div>', unsafe_allow_html=True)
-            available_rep = [c for c in rep_list if c not in st.session_state.rep_ranking]
-            with st.container(height=240):
-                for coach in available_rep:
-                    if st.button(coach, key=f"add_rep_{coach}", use_container_width=True):
-                        if len(st.session_state.rep_ranking) < 5:
-                            st.session_state.rep_ranking.append(coach)
-                            st.rerun()
-
-        with col_r_center:
-            st.markdown('<div class="side-header">Republicans (Top 5)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="side-header" style="margin-top:8px; margin-bottom:2px;">Republicans (Top 5)</div>', unsafe_allow_html=True)
             rep_result = sort_items(
                 st.session_state.rep_ranking,
                 direction="vertical",
@@ -904,7 +891,13 @@ with tab3:  # Coaches
                 st.session_state.rep_ranking = rep_result
                 st.rerun()
 
-        with col_r_right:
+        # RIGHT COLUMN – all controls together
+        with col_right:
+            st.markdown('<div class="side-header">CONTROLS</div>', unsafe_allow_html=True)
+            if st.button("Clear Democrats", use_container_width=True):
+                st.session_state.dem_ranking = []
+                st.session_state.dem_ranking_version += 1
+                st.rerun()
             if st.button("Clear Republicans", use_container_width=True):
                 st.session_state.rep_ranking = []
                 st.session_state.rep_ranking_version += 1
